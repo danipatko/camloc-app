@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
 
     external fun stringFromJNI(): String
-    external fun balls(matAddress: Long)
+    external fun balls(matAddress: Long): Array<Marker>
 
     private val loader: BaseLoaderCallback = object : BaseLoaderCallback(this) {
         override fun onManagerConnected(status: Int) {
@@ -120,9 +120,11 @@ class MainActivity : AppCompatActivity() {
         override fun analyze(image: ImageProxy) {
             val mat = Mat()
             Utils.bitmapToMat(image.toBitmap(), mat)
-            balls(mat.nativeObjAddr)
 
-            // Utils.matToBitmap(mat, binding.viewFinder.bitmap)
+            val p = balls(mat.nativeObjAddr)
+            if(p.isNotEmpty()) {
+                Log.d(TAG, "point: ${p.size}")
+            }
             image.close()
         }
     }
@@ -141,7 +143,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        // Used to load the 'jno' library on application startup.
+        // Used to load the 'camloc' library on application startup.
         init {
             System.loadLibrary("camloc")
         }

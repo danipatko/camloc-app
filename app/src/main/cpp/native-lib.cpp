@@ -15,26 +15,44 @@ cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
 cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
 cv::aruco::ArucoDetector detector(dictionary, detectorParams);
 
+jobject toMarker(JNIEnv *env, int id, Point2d point);
+Point2d avgRect(const std::vector<Point2f>* corners);
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_dapa_camloc_MainActivity_stringFromJNI(JNIEnv* env, jobject ) {
     std::string hello = "Hello from C++";
     return env->NewStringUTF(hello.c_str());
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_dapa_camloc_MainActivity_balls(JNIEnv* env, jobject inst, jlong mat_address) {
-    Mat &shid = *(Mat *) mat_address;
+    Mat &bgra = *(Mat *) mat_address;
     Mat mat;
-    cvtColor(shid, mat, COLOR_BGRA2BGR);
-//    Mat &draw = *(Mat *) draw_address;
+
+    cvtColor(bgra, mat, COLOR_BGRA2BGR);
     detector.detectMarkers(mat, markerCorners, markerIds, rejectedCandidates);
-//    draw = mat.clone();
-    if(!markerIds.empty()) {
-        __android_log_print(ANDROID_LOG_INFO, TAG, "Found: %d\n", markerIds[0]);
-//        cv::aruco::drawDetectedMarkers(draw, markerCorners, markerIds);
+
+    jobjectArray result = env->NewObjectArray((int)markerIds.size(), env->FindClass("com/dapa/camloc/Marker"), nullptr);
+    // __android_log_print(ANDROID_LOG_INFO, TAG, "Found: %d\n", markerIds[0]);
+    for (int i = 0; i < markerIds.size(); ++i) {
+        env->SetObjectArrayElement(result, i, toMarker(env, markerIds[i], avgRect(&markerCorners[i])));
     }
+    return result;
+}
 
-    // __android_log_print(ANDROID_LOG_INFO, TAG, "Mat type is: %d\n", mat.type());
+// converts opencv point to java opencv binding type point
+jobject toMarker(JNIEnv *env, int id, Point2d point) {
+    jclass cls = env->FindClass("com/dapa/camloc/Marker");
+    jmethodID constructor = env->GetMethodID(cls, "<init>", "(IDD)V");
+    jobject object = env->NewObject(cls, constructor, id, point.x, point.y);
+    return object;
+}
 
-    // cv::cvtColor(mat, gray, COLOR_RGB2GRAY);
+Point2d avgRect(const std::vector<Point2f>* corners) {
+    float x = 0, y = 0;
+    for (auto &c : *corners) {
+        x += c.x;
+        y += c.y;
+    }
+    return { x / (float)corners->size(), y / (float)corners->size() };
 }
