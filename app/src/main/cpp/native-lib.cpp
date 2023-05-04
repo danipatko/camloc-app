@@ -16,13 +16,13 @@ cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco:
 cv::aruco::ArucoDetector detector(dictionary, detectorParams);
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_dapa_jno_MainActivity_stringFromJNI(JNIEnv* env, jobject ) {
+Java_com_dapa_camloc_MainActivity_stringFromJNI(JNIEnv* env, jobject ) {
     std::string hello = "Hello from C++";
     return env->NewStringUTF(hello.c_str());
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_dapa_jno_MainActivity_balls(JNIEnv* env, jobject inst, jlong mat_address) {
+Java_com_dapa_camloc_MainActivity_balls(JNIEnv* env, jobject inst, jlong mat_address) {
     Mat &shid = *(Mat *) mat_address;
     Mat mat;
     cvtColor(shid, mat, COLOR_BGRA2BGR);

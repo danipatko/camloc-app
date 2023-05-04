@@ -16,4 +16,11 @@ rootProject.name = "CamLoc"
 include ':app'
 
 include ':opencv'
-project(':opencv').projectDir = new File(opencvsdk + '/sdk')
+
+import org.gradle.internal.os.OperatingSystem
+OperatingSystem os = OperatingSystem.current()
+if(os.isWindows()) {
+    project(':opencv').projectDir = new File(opencvsdkwin + '/sdk')
+} else {
+    project(':opencv').projectDir = new File(opencvsdk + '/sdk')
+}

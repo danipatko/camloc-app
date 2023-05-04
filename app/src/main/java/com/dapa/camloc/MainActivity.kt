@@ -143,7 +143,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         // Used to load the 'jno' library on application startup.
         init {
-            System.loadLibrary("jno")
+            System.loadLibrary("camloc")
         }
 
         private const val TAG = "CameraXApp"
