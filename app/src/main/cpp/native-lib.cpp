@@ -25,11 +25,12 @@ Java_com_dapa_camloc_MainActivity_stringFromJNI(JNIEnv* env, jobject ) {
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_dapa_camloc_MainActivity_balls(JNIEnv* env, jobject inst, jlong mat_address) {
+Java_com_dapa_camloc_MainActivity_detectMarkers(JNIEnv* env, jobject inst, jlong mat_address) {
     Mat &bgra = *(Mat *) mat_address;
     Mat mat;
 
     cvtColor(bgra, mat, COLOR_BGRA2BGR);
+    rotate(mat, mat, ROTATE_90_CLOCKWISE);
     detector.detectMarkers(mat, markerCorners, markerIds, rejectedCandidates);
 
     jobjectArray result = env->NewObjectArray((int)markerIds.size(), env->FindClass("com/dapa/camloc/Marker"), nullptr);
@@ -37,7 +38,25 @@ Java_com_dapa_camloc_MainActivity_balls(JNIEnv* env, jobject inst, jlong mat_add
     for (int i = 0; i < markerIds.size(); ++i) {
         env->SetObjectArrayElement(result, i, toMarker(env, markerIds[i], avgRect(&markerCorners[i])));
     }
+
     return result;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_dapa_camloc_MainActivity_drawMarkers(JNIEnv* env, jobject inst, jlong mat_address, jlong draw_address) {
+    Mat &bgra = *(Mat *) mat_address;
+    Mat* draw = (Mat *) draw_address;
+
+    Mat mat;
+
+    cvtColor(bgra, mat, COLOR_BGRA2BGR);
+    *draw = mat.clone();
+
+    detector.detectMarkers(mat, markerCorners, markerIds, rejectedCandidates);
+
+    for (int i = 0; i < markerIds.size(); ++i) {
+        cv::drawMarker(*draw, avgRect(&markerCorners[i]), Scalar(255, 0, 0));
+    }
 }
 
 // converts opencv point to java opencv binding type point
