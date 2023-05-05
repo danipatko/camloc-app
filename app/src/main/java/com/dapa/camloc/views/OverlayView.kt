@@ -23,11 +23,9 @@ class OverlayView(context: Context, attrs: AttributeSet): View(context, attrs) {
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         if(canvas == null || originalSize == null) return
-
         markers.forEach {
-            val p = transformPoint(it.point, originalSize!!, width, height)
-            // canvas.drawPoint(p.x.toFloat(), p.y.toFloat(), paint)
-            canvas.drawText(it.id.toString(), p.x.toFloat(), p.y.toFloat(), paint)
+            val (x, y) = transformPoint(it.point, width, height)
+            canvas.drawText(it.id.toString(), x, y, paint)
         }
     }
 
@@ -38,11 +36,12 @@ class OverlayView(context: Context, attrs: AttributeSet): View(context, attrs) {
         postInvalidate()
     }
 
-    private fun transformPoint(p: Point, ogSize: Size, dx: Int, dy: Int): Point {
-        return Point(p.x * (dx / ogSize.height.toFloat()), p.y * (dy / ogSize.width.toFloat()))
+    data class CanvasPoint(val x: Float, val y: Float)
+    private fun transformPoint(p: Point, dx: Int, dy: Int): CanvasPoint {
+        return CanvasPoint(p.x.toFloat() * (dx / originalSize!!.width.toFloat()),  p.y.toFloat() * (dy / originalSize!!.height.toFloat()))
     }
 
     companion object {
-        val TAG = "OverlayView"
+        const val TAG = "OverlayView"
     }
 }

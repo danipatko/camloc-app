@@ -30,7 +30,7 @@ Java_com_dapa_camloc_MainActivity_detectMarkers(JNIEnv* env, jobject inst, jlong
     Mat mat;
 
     cvtColor(bgra, mat, COLOR_BGRA2BGR);
-    rotate(mat, mat, ROTATE_90_CLOCKWISE);
+    // rotate(mat, mat, ROTATE_90_CLOCKWISE);
     detector.detectMarkers(mat, markerCorners, markerIds, rejectedCandidates);
 
     jobjectArray result = env->NewObjectArray((int)markerIds.size(), env->FindClass("com/dapa/camloc/Marker"), nullptr);

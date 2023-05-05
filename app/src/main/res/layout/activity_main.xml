@@ -6,15 +6,16 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+
     <FrameLayout
         android:id="@+id/frame"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="match_parent"
         android:clipChildren="false"
-        app:layout_constraintDimensionRatio="4:3"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="16:9"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.camera.view.PreviewView
@@ -28,21 +29,53 @@
             android:layout_height="match_parent" />
 
     </FrameLayout>
-    <!--<ImageView
-        android:id="@+id/anal"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>-->
 
-<!--
-    <TextView
-        android:id="@+id/sample_text"
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_res_group"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:rotation="-90"
+        android:layout_marginStart="-20dp"
+        app:layout_constraintStart_toStartOf="@+id/frame"
+        app:selectionRequired="true"
+        app:singleLine="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_res_1"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/res_960x540" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_res_2"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/res_1280x720" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_res_3"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/res_1920x1080" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <Button
+        android:id="@+id/switchCameraButton"
+        style="?attr/materialIconButtonOutlinedStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
+        app:icon="@drawable/ic_outline_cameraswitch_24"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/frame"
         app:layout_constraintTop_toTopOf="parent" />
--->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

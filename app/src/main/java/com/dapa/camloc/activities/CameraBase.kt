@@ -9,14 +9,13 @@ import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.camera.core.*
+import androidx.camera.core.Preview.SurfaceProvider
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.dapa.camloc.Marker
-import com.dapa.camloc.databinding.ActivityMainBinding
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -29,10 +28,6 @@ import java.util.concurrent.Executors
 abstract class CameraBase : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
 
-    var mat = Mat()
-    lateinit var camera: Camera
-    open val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
     private val loader: BaseLoaderCallback = object : BaseLoaderCallback(this) {
         override fun onManagerConnected(status: Int) {
             when (status) {
@@ -44,26 +39,77 @@ abstract class CameraBase : AppCompatActivity() {
         }
     }
 
+    var mat = Mat()
+
+    private lateinit var camera: Camera
+    private var initialized: Boolean = false
+
+    var mCameraSelector : CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+        set(value) {
+            field = value
+            // if camera is running, restart
+            if(initialized) startCamera()
+        }
+
+    var mResolution: Size = Size(1280, 720)
+        set(value) {
+            field = value
+            if(initialized) startCamera()
+        }
+
+    // note: 4:3 resolution would be pointless for our application
+    private var aspectRatio: AspectRatioStrategy = AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
+        set(value) {
+            field = value
+            if(initialized) startCamera()
+        }
+
+    var mZoomRatio: Float = 0.5F
+        set(value) {
+            field = value
+            if(initialized) camera.cameraControl.setZoomRatio(value)
+        }
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener({
+            val previewSurfaceProvider = onBind()
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-            // fixed use case
+
+            // prep use cases
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setResolutionSelector(
+                    ResolutionSelector.Builder()
+                        .setAspectRatioStrategy(aspectRatio)
+                        .setResolutionStrategy(ResolutionStrategy(mResolution, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER))
+                        .build()
+                )
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor, ImageAnalyzer())
                 }
-            // extra use case (preview)
-            val useCaseGroup = UseCaseGroup.Builder().addUseCase(imageAnalyzer)
-            val extraUseCase = onStartCamera()
-            if(extraUseCase != null) useCaseGroup.addUseCase(extraUseCase)
 
+            val preview = Preview.Builder()
+                .setResolutionSelector(
+                    ResolutionSelector.Builder()
+                        .setAspectRatioStrategy(aspectRatio)
+                        .setResolutionStrategy(ResolutionStrategy(mResolution, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER))
+                        .build()
+                )
+                .build()
+                .also {
+                    it.setSurfaceProvider(previewSurfaceProvider)
+                }
+
+            val useCaseGroup = UseCaseGroup.Builder().addUseCase(imageAnalyzer).addUseCase(preview).build()
             try {
                 cameraProvider.unbindAll()
-                camera = cameraProvider.bindToLifecycle(this, cameraSelector, useCaseGroup.build())
+                camera = cameraProvider.bindToLifecycle(this, mCameraSelector, useCaseGroup)
+                if(!initialized) {
+                    camera.cameraControl.setZoomRatio(mZoomRatio)
+                }
+                initialized = true
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
@@ -77,9 +123,12 @@ abstract class CameraBase : AppCompatActivity() {
         }
     }
 
-    abstract fun onStartCamera(): UseCase?
+    // ---
 
     abstract fun onFrame(image: ImageProxy)
+
+    // called on camera startup (or restart)
+    abstract fun onBind(): SurfaceProvider
 
     // ---
 
@@ -116,7 +165,7 @@ abstract class CameraBase : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
+            if(allPermissionsGranted()) {
                 startCamera()
             } else {
                 Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show()
