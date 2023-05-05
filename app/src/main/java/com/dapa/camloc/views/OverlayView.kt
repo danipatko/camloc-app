@@ -8,15 +8,15 @@ import android.util.Log
 import android.util.Size
 import android.view.View
 import androidx.core.content.ContextCompat
+import com.dapa.camloc.Marker
 import org.opencv.core.Point
-import kotlin.math.abs
 
 class OverlayView(context: Context, attrs: AttributeSet): View(context, attrs) {
-    private val markers: MutableList<Point> = mutableListOf()
+    private val markers: MutableList<Marker> = mutableListOf()
     private val paint = Paint().apply {
-        style = Paint.Style.STROKE
+        style = Paint.Style.FILL
         color = ContextCompat.getColor(context, android.R.color.holo_red_light)
-        strokeWidth = 10f
+        textSize = 40f
     }
     private var originalSize: Size? = null
 
@@ -25,15 +25,16 @@ class OverlayView(context: Context, attrs: AttributeSet): View(context, attrs) {
         if(canvas == null || originalSize == null) return
 
         markers.forEach {
-            val p = transformPoint(it, originalSize!!, width, height)
-            canvas.drawPoint(p.x.toFloat(), p.y.toFloat(), paint);
+            val p = transformPoint(it.point, originalSize!!, width, height)
+            // canvas.drawPoint(p.x.toFloat(), p.y.toFloat(), paint)
+            canvas.drawText(it.id.toString(), p.x.toFloat(), p.y.toFloat(), paint)
         }
     }
 
-    fun draw(m: Array<Point>, size: Size) {
+    fun draw(m: Array<Marker>, size: Size) {
         originalSize = size
         markers.clear()
-        markers.addAll(m)
+        if(m.isNotEmpty()) markers.addAll(m)
         postInvalidate()
     }
 
