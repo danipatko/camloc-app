@@ -15,7 +15,6 @@ import com.dapa.camloc.Marker
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import org.opencv.video.Tracker
 
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding
@@ -28,12 +27,15 @@ class TrackerActivity : CameraBase() {
     // native function declarations
     external fun stringFromJNI(): String
     private external fun detectMarkers(matAddress: Long): Array<Marker>
+    private external fun trackMarker(matAddress: Long): Float
 
     override fun onBind(): PreviewView = binding.cameraLayout.viewFinder
 
     override fun onFrame(image: ImageProxy) {
-        val p = detectMarkers(mat.nativeObjAddr)
-        binding.cameraLayout.overlay.draw(p, Size(image.width, image.height))
+        // val p = detectMarkers(mat.nativeObjAddr)
+        // binding.cameraLayout.overlay.draw(p, Size(image.width, image.height))
+        val x = trackMarker(mat.nativeObjAddr)
+        binding.cameraLayout.overlay.drawX(x)
         image.close()
     }
 
