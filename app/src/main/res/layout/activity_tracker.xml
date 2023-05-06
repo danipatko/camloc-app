@@ -3,8 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".activities.TrackerActivity">
 
-
+    <include
+        layout="@layout/camera_layout"
+        android:id="@+id/camera_layout" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

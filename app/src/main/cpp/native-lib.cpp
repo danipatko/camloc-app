@@ -19,13 +19,13 @@ jobject toMarker(JNIEnv *env, int id, Point2d point);
 Point2d avgRect(const std::vector<Point2f>* corners);
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_dapa_camloc_MainActivity_stringFromJNI(JNIEnv* env, jobject ) {
+Java_com_dapa_camloc_activities_TrackerActivity_stringFromJNI(JNIEnv* env, jobject ) {
     std::string hello = "Hello from C++";
     return env->NewStringUTF(hello.c_str());
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_dapa_camloc_MainActivity_detectMarkers(JNIEnv* env, jobject inst, jlong mat_address) {
+Java_com_dapa_camloc_activities_TrackerActivity_detectMarkers(JNIEnv* env, jobject inst, jlong mat_address) {
     Mat &bgra = *(Mat *) mat_address;
     Mat mat;
 
@@ -43,7 +43,7 @@ Java_com_dapa_camloc_MainActivity_detectMarkers(JNIEnv* env, jobject inst, jlong
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_dapa_camloc_MainActivity_drawMarkers(JNIEnv* env, jobject inst, jlong mat_address, jlong draw_address) {
+Java_com_dapa_camloc_activities_TrackerActivity_drawMarkers(JNIEnv* env, jobject inst, jlong mat_address, jlong draw_address) {
     Mat &bgra = *(Mat *) mat_address;
     Mat* draw = (Mat *) draw_address;
 
