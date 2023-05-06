@@ -1,19 +1,21 @@
 package com.dapa.camloc.activities
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.camera.core.*
-import androidx.camera.core.Preview.SurfaceProvider
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.opencv.android.BaseLoaderCallback
@@ -70,10 +72,11 @@ abstract class CameraBase : AppCompatActivity() {
             if(initialized) camera.cameraControl.setZoomRatio(value)
         }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
-            val previewSurfaceProvider = onBind()
+            val previewView = onBind()
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
             // prep use cases
@@ -99,8 +102,12 @@ abstract class CameraBase : AppCompatActivity() {
                 )
                 .build()
                 .also {
-                    it.setSurfaceProvider(previewSurfaceProvider)
+                    it.setSurfaceProvider(previewView.surfaceProvider)
                 }
+
+            previewView.setOnTouchListener { _, ev ->
+                return@setOnTouchListener handlePreviewTouch(ev, previewView.width.toFloat(), previewView.height.toFloat())
+            }
 
             val useCaseGroup = UseCaseGroup.Builder().addUseCase(imageAnalyzer).addUseCase(preview).build()
             try {
@@ -128,9 +135,26 @@ abstract class CameraBase : AppCompatActivity() {
     abstract fun onFrame(image: ImageProxy)
 
     // called on camera startup (or restart)
-    abstract fun onBind(): SurfaceProvider
+    abstract fun onBind(): PreviewView
 
     // ---
+
+    private fun handlePreviewTouch(ev: MotionEvent, w: Float, h: Float): Boolean {
+        return when (ev.action) {
+            MotionEvent.ACTION_DOWN -> true
+            MotionEvent.ACTION_UP -> {
+                val factory: MeteringPointFactory = SurfaceOrientedMeteringPointFactory(w, h)
+                val autoFocusPoint = factory.createPoint(ev.x, ev.y)
+                camera.cameraControl.startFocusAndMetering(
+                    FocusMeteringAction.Builder(autoFocusPoint, FocusMeteringAction.FLAG_AF) // flag as fuck
+                        .apply { disableAutoCancel() }
+                        .build()
+                )
+                true
+            }
+            else -> false
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -179,7 +203,7 @@ abstract class CameraBase : AppCompatActivity() {
     }
 
     companion object {
-        private const val TAG = "CameraBase"
+        private const val TAG = "CamLocCameraBase"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
             mutableListOf (Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO).apply {

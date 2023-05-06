@@ -59,7 +59,7 @@ Java_com_dapa_camloc_activities_TrackerActivity_drawMarkers(JNIEnv* env, jobject
     }
 }
 
-// converts opencv point to java opencv binding type point
+// converts opencv point to marker java class
 jobject toMarker(JNIEnv *env, int id, Point2d point) {
     jclass cls = env->FindClass("com/dapa/camloc/Marker");
     jmethodID constructor = env->GetMethodID(cls, "<init>", "(IDD)V");

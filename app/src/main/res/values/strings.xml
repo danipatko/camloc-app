@@ -3,4 +3,5 @@
     <string name="res_960x540">960x540</string>
     <string name="res_1280x720">1280x720</string>
     <string name="res_1920x1080">1920x1080</string>
+    <string name="cam_guide">tap to reset focus and metering, double back to return</string>
 </resources>

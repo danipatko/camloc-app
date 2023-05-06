@@ -3,6 +3,7 @@ package com.dapa.camloc.activities
 import android.os.Build
 import android.os.Bundle
 import android.util.Size
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.WindowInsets
@@ -10,7 +11,7 @@ import android.view.WindowInsetsController
 import androidx.annotation.RequiresApi
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
+import androidx.camera.view.PreviewView
 import com.dapa.camloc.Marker
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
@@ -28,7 +29,7 @@ class TrackerActivity : CameraBase() {
     external fun stringFromJNI(): String
     private external fun detectMarkers(matAddress: Long): Array<Marker>
 
-    override fun onBind(): Preview.SurfaceProvider = binding.cameraLayout.viewFinder.surfaceProvider
+    override fun onBind(): PreviewView = binding.cameraLayout.viewFinder
 
     override fun onFrame(image: ImageProxy) {
         val p = detectMarkers(mat.nativeObjAddr)
