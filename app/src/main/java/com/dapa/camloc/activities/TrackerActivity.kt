@@ -3,7 +3,6 @@ package com.dapa.camloc.activities
 import android.os.Build
 import android.os.Bundle
 import android.util.Size
-import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.WindowInsets
@@ -16,6 +15,7 @@ import com.dapa.camloc.Marker
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import org.opencv.video.Tracker
 
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding

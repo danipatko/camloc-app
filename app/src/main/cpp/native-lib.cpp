@@ -4,16 +4,21 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <android/log.h>
+#include "headers/tracking.hpp"
 
 #define TAG "native-lib.cpp"
 
 using namespace cv;
 
+// aruco detector setup
 std::vector<int> markerIds;
 std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
 cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
 cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
 cv::aruco::ArucoDetector detector(dictionary, detectorParams);
+// tracker
+Ptr<TrackerKCF> tracker = TrackerKCF::create();
+
 
 jobject toMarker(JNIEnv *env, int id, Point2d point);
 Point2d avgRect(const std::vector<Point2f>* corners);
