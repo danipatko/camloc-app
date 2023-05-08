@@ -17,15 +17,18 @@ class OverlayView(context: Context, attrs: AttributeSet): View(context, attrs) {
         strokeWidth = 10f
     }
     private var centerX: Float = Float.NaN
+    private var flipX: Boolean = false
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         if(canvas == null) return
-        canvas.drawLine(centerX * width, 0f, centerX * width, height.toFloat(), paint);
+        val x = if(flipX) width - (centerX * width) else centerX * width
+        canvas.drawLine(x, 0f, x, height.toFloat(), paint);
     }
 
-    fun drawX(x: Float) {
+    fun drawX(x: Float, flip: Boolean) {
         centerX = x
+        flipX = flip
         postInvalidate()
     }
 
