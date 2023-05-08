@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -23,6 +24,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.dapa.camloc.CameraConfig
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -53,8 +55,7 @@ abstract class CameraBase : AppCompatActivity() {
     private lateinit var camera: Camera
     private var initialized: Boolean = false
 
-    data class CamInfo(val focalLength: Float, val horizontalFov: Float, val verticalFov: Float)
-    var mCamInfo: CamInfo? = null
+    var cameraConfig: CameraConfig? = null
 
     var mCameraIndex : Int = 0
         set(value) {
@@ -131,7 +132,7 @@ abstract class CameraBase : AppCompatActivity() {
                 camera = cameraProvider.bindToLifecycle(this, cameraSelector, useCaseGroup)
                 camera.cameraControl.setZoomRatio(mZoomRatio)
                 initialized = true
-                checkCameraCharacteristics()
+                cameraConfig = CameraConfig(this, camera.cameraInfo, mResolution)
                 onCameraStarted()
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
@@ -165,29 +166,6 @@ abstract class CameraBase : AppCompatActivity() {
                     ?.let { listOf(it) } ?: backCameras
             }
             .build()
-
-    @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
-    private fun checkCameraCharacteristics() {
-        val cameraId = Camera2CameraInfo.from(camera.cameraInfo).cameraId
-        val cameraManager = this.getSystemService(CAMERA_SERVICE) as CameraManager
-        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-        // this is device specific, would be great if samsung implemented it
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val distCoeffs = characteristics.get(CameraCharacteristics.LENS_DISTORTION)
-            Log.d(TAG, "Lens distortion: $distCoeffs")
-        }
-        // these 2 should be available on all devices with a camera
-        val focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
-        val size = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
-
-        mCamInfo = if(focalLengths != null && focalLengths.isNotEmpty() && size != null) {
-            val fovX = (2 * atan(size.width / (2 * focalLengths[0]))) * (180 / PI)
-            val fovY = (2 * atan(size.height / (2 * focalLengths[0]))) * (180 / PI)
-            CamInfo(focalLengths[0], fovX.toFloat(), fovY.toFloat())
-        } else {
-            null
-        }
-    }
 
     // ---
 

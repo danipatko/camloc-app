@@ -132,3 +132,23 @@ Rect2i boundingToRect(const std::vector<Point2f>* corners) {
     }
     return {(int)sx, (int)sy, (int)abs(mx - sx), (int)abs(my - sy)};
 }
+
+// sillygoofy rotation fuckery
+
+
+
+cv::Mat objPoints;
+cv::Mat cameraMatrix;
+cv::Mat distCoeffs;
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_dapa_camloc_activities_TrackerActivity_setParams(JNIEnv* env, jobject inst, jfloat focalLength, jfloat sensorWidth, jfloat sensorHeight) {
+    // world coordinates
+    float markerLength = 0.5;
+    objPoints = Mat(4, 1, CV_32FC3);
+    objPoints.ptr<cv::Vec3f>(0)[0] = cv::Vec3f(-markerLength/2.f, markerLength/2.f, 0);
+    objPoints.ptr<cv::Vec3f>(0)[1] = cv::Vec3f(markerLength/2.f, markerLength/2.f, 0);
+    objPoints.ptr<cv::Vec3f>(0)[2] = cv::Vec3f(markerLength/2.f, -markerLength/2.f, 0);
+    objPoints.ptr<cv::Vec3f>(0)[3] = cv::Vec3f(-markerLength/2.f, -markerLength/2.f, 0);
+}
+
