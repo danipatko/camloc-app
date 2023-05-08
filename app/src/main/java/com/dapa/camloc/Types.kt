@@ -15,3 +15,5 @@ class Marker(mid: Int, x: Double, y: Double) {
         return "$id | $point"
     }
 }
+
+data class RotationVector(val x: Float, val y: Float, val z: Float);

@@ -3,6 +3,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
 #include <android/log.h>
 #include "headers/tracking.hpp"
 
@@ -26,6 +27,13 @@ cv::aruco::DetectorParameters detectorParams = cv::aruco::DetectorParameters();
 cv::aruco::Dictionary dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
 cv::aruco::ArucoDetector detector(dictionary, detectorParams);
 
+// pose estimation
+cv::Mat objPoints;
+cv::Mat cameraMatrix;
+cv::Mat distCoeffs;
+
+Mat mtxQ(3,3, CV_32F), mtxR(3,3,CV_32F), rotationMatrix(3, 3, CV_32F);
+
 // tracker
 Ptr<TrackerKCF> tracker;
 Rect2i boundingBox;
@@ -37,22 +45,31 @@ Java_com_dapa_camloc_activities_TrackerActivity_stringFromJNI(JNIEnv* env, jobje
     return env->NewStringUTF(hello.c_str());
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_dapa_camloc_activities_TrackerActivity_detectMarkers(JNIEnv* env, jobject inst, jlong mat_address) {
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_dapa_camloc_activities_TrackerActivity_detectMarkers(JNIEnv* env, jobject inst, jlong mat_address, jlong draw_address) {
     Mat &bgra = *(Mat *) mat_address;
+    Mat &draw = *(Mat *) draw_address;
     Mat mat;
 
     cvtColor(bgra, mat, COLOR_BGRA2BGR);
     // rotate(mat, mat, ROTATE_90_CLOCKWISE);
     detector.detectMarkers(mat, markerCorners, markerIds, rejectedCandidates);
 
-    jobjectArray result = env->NewObjectArray((int)markerIds.size(), env->FindClass("com/dapa/camloc/Marker"), nullptr);
+    // jobjectArray result = env->NewObjectArray((int)markerIds.size(), env->FindClass("com/dapa/camloc/Marker"), nullptr);
     // __android_log_print(ANDROID_LOG_INFO, TAG, "Found: %d\n", markerIds[0]);
-    for (int i = 0; i < markerIds.size(); ++i) {
-        env->SetObjectArrayElement(result, i, toMarker(env, markerIds[i], avgRect(&markerCorners[i])));
-    }
+    if(markerIds.empty()) return NAN;
 
-    return result;
+    cv::Vec3d rvec, tvec;
+    cv::solvePnP(objPoints, markerCorners[0], cameraMatrix, distCoeffs, rvec, tvec, false, SOLVEPNP_ITERATIVE);
+
+    draw = mat.clone();
+    drawFrameAxes(draw, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
+
+    // Rodrigues(rvec, rotationMatrix);
+    // auto eulerAngles = cv::RQDecomp3x3(rotationMatrix, mtxR, mtxQ);
+    // __android_log_print(ANDROID_LOG_INFO, TAG, "rvec: (%.2f, %.2f, %.2f)\n", rvec[0], rvec[1], rvec[2]);
+
+    return 0;
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
@@ -134,17 +151,13 @@ Rect2i boundingToRect(const std::vector<Point2f>* corners) {
 }
 
 // sillygoofy rotation fuckery
+extern "C" JNIEXPORT void JNICALL
+Java_com_dapa_camloc_activities_TrackerActivity_setParams(JNIEnv* env, jobject inst, jfloat focalX, jfloat focalY, jfloat cX, jfloat cY) {
+    cameraMatrix = (Mat_<double>(3,3) << focalX, 0, cX, 0, focalY, cY, 0, 0, 1);
+    distCoeffs = (Mat_<double>(1,5) << 0, 0, 0, 0, 0);
 
-
-
-cv::Mat objPoints;
-cv::Mat cameraMatrix;
-cv::Mat distCoeffs;
-
-extern "C" JNIEXPORT jfloat JNICALL
-Java_com_dapa_camloc_activities_TrackerActivity_setParams(JNIEnv* env, jobject inst, jfloat focalLength, jfloat sensorWidth, jfloat sensorHeight) {
     // world coordinates
-    float markerLength = 0.5;
+    float markerLength = 0.1;
     objPoints = Mat(4, 1, CV_32FC3);
     objPoints.ptr<cv::Vec3f>(0)[0] = cv::Vec3f(-markerLength/2.f, markerLength/2.f, 0);
     objPoints.ptr<cv::Vec3f>(0)[1] = cv::Vec3f(markerLength/2.f, markerLength/2.f, 0);

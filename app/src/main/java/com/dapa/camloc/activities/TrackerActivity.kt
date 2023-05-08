@@ -8,14 +8,11 @@ import android.view.ScaleGestureDetector
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.annotation.RequiresApi
-import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
-import com.dapa.camloc.Marker
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
 
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding
@@ -29,15 +26,38 @@ class TrackerActivity : CameraBase() {
 
     // native function declarations
     external fun stringFromJNI(): String
-    private external fun detectMarkers(matAddress: Long): Array<Marker>
+    private external fun detectMarkers(matAddress: Long, drawAddress: Long): Double
     private external fun trackMarker(matAddress: Long): Float
+    private external fun setParams(fx: Float, fy: Float, cx:Float, cy:Float)
+
+    // private val draw = Mat()
 
     override fun onBind(): PreviewView = binding.cameraLayout.viewFinder
 
     override fun onFrame(image: ImageProxy) {
         val x = trackMarker(mat.nativeObjAddr)
         binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
+
+        // https://github.com/opencv/opencv/issues/8813
+
+        /*if(cameraConfig != null) {
+            val rx = detectMarkers(mat.nativeObjAddr, draw.nativeObjAddr)
+            // Log.d(TAG, "$rx")
+            if(!rx.isNaN()) {
+                runOnUiThread {
+                    // val bm: Bitmap = Bitmap.createBitmap(mResolution.width, mResolution.height, Bitmap.Config.ARGB_8888)
+                    // Utils.matToBitmap(draw, bm)
+                    // binding.rotationIndicator.setImageBitmap(bm)
+                    binding.rotationIndicator.rotationY = -rx.toFloat()
+                }
+            }
+        }*/
         image.close()
+    }
+
+    override fun onCameraStarted() {
+        if(cameraConfig != null)
+            setParams(cameraConfig!!.focalLengthX, cameraConfig!!.focalLengthY, cameraConfig!!.cX, cameraConfig!!.cY)
     }
 
     // ---

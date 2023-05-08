@@ -3,6 +3,7 @@ package com.dapa.camloc.activities
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
@@ -54,7 +55,6 @@ abstract class CameraBase : AppCompatActivity() {
 
     private lateinit var camera: Camera
     private var initialized: Boolean = false
-
     var cameraConfig: CameraConfig? = null
 
     var mCameraIndex : Int = 0
@@ -77,7 +77,7 @@ abstract class CameraBase : AppCompatActivity() {
             if(initialized) startCamera()
         }
 
-    var mZoomRatio: Float = 0.5F
+    var mZoomRatio: Float = 1F
         set(value) {
             field = value
             if(initialized) camera.cameraControl.setZoomRatio(value)
