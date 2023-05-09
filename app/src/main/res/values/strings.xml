@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">CamLoc</string>
     <string name="cam_guide">tap to reset focus and metering, double back to return</string>
+    <string name="no_access">no accessibility for you</string>
+    <string name="na">N/A</string>
+    <string name="launch_detection">Launch detection</string>
 </resources>
