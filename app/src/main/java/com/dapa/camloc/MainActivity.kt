@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
 import java.net.Inet4Address
@@ -22,6 +23,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // Note: there were a whole lot of API changes in getting network/interface information
         // there is no way I'm going to implement all of them (might aswell increment minsdk to 30)
