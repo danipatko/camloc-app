@@ -20,15 +20,15 @@ class CameraConfig(context: Context, cameraInfo: CameraInfo, res: Size) {
     val cameraMatrix: FloatArray
         get() = floatArrayOf(focalLengthX, 0f, cX, 0f, focalLengthY, cY, 0f, 0f, 1f)
 
-    val focalLengthMM: Float
+    private val focalLengthMM: Float
 
     // in px
     val focalLengthX: Float
     val focalLengthY: Float
 
     // in deg
-    val fovX: Float
-    val fovY: Float
+    private val fovX: Float
+    private val fovY: Float
 
     // principal point (center of image)
     val cX: Float get() = resolution.width.toFloat() / 2

@@ -25,33 +25,16 @@ class TrackerActivity : CameraBase() {
     private val cameraSelectorDisplay = arrayOf<CharSequence>("Camera facing back", "Ultra-wide lens", "Camera facing front")
 
     // native function declarations
-    external fun stringFromJNI(): String
-    private external fun detectMarkers(matAddress: Long, drawAddress: Long): Double
     private external fun trackMarker(matAddress: Long): Float
     private external fun setParams(fx: Float, fy: Float, cx:Float, cy:Float)
-
-    // private val draw = Mat()
 
     override fun onBind(): PreviewView = binding.cameraLayout.viewFinder
 
     override fun onFrame(image: ImageProxy) {
         val x = trackMarker(mat.nativeObjAddr)
         binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
-
+        // why is pose estimation unreliable?
         // https://github.com/opencv/opencv/issues/8813
-
-        /*if(cameraConfig != null) {
-            val rx = detectMarkers(mat.nativeObjAddr, draw.nativeObjAddr)
-            // Log.d(TAG, "$rx")
-            if(!rx.isNaN()) {
-                runOnUiThread {
-                    // val bm: Bitmap = Bitmap.createBitmap(mResolution.width, mResolution.height, Bitmap.Config.ARGB_8888)
-                    // Utils.matToBitmap(draw, bm)
-                    // binding.rotationIndicator.setImageBitmap(bm)
-                    binding.rotationIndicator.rotationY = -rx.toFloat()
-                }
-            }
-        }*/
         image.close()
     }
 
