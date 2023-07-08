@@ -23,6 +23,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CamLoc"
         tools:targetApi="31">
+        <service android:name=".NetService" />
+
         <activity
             android:name=".activities.TrackerActivity"
             android:exported="false"

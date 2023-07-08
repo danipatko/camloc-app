@@ -1,15 +1,23 @@
 package com.dapa.camloc.activities
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
+import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
+import com.dapa.camloc.NetService
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -17,6 +25,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding
     private lateinit var mScaleDetector : ScaleGestureDetector
+
+    private lateinit var mService: NetService
+    private var mBound: Boolean = false
+
+    private var posx: Float = 0f
+    private var posy: Float = 0f
+    private var rot: Float = 0f
 
     private val resolutionsDisplay = arrayOf<CharSequence>("640x360 nHD", "960x540 qHD", "1280x720 HD", "1600x900 HD+", "1920x1080 HFD", "2560x1440 QHD")
     private val resolutions = arrayOf(Size(640, 360), Size(960, 540), Size(1280,720), Size(1600,900), Size(1920,1080), Size(2560,1440))
@@ -50,6 +65,10 @@ class TrackerActivity : CameraBase() {
         binding = ActivityTrackerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        posx = intent.getFloatExtra("posx", 0f)
+        posy = intent.getFloatExtra("posy", 0f)
+        rot = intent.getFloatExtra("rot", 0f)
+
         mScaleDetector = ScaleGestureDetector(this, scaleListener)
         binding.cameraLayout.currentZoomRatio.text = String.format("%.1fX", mZoomRatio)
 
@@ -79,14 +98,18 @@ class TrackerActivity : CameraBase() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onResume() {
         super.onResume()
+        Intent(this, NetService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
 
-        window.setDecorFitsSystemWindows(false)
-        binding.root.windowInsetsController?.let {
-            it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            it.hide(WindowInsets.Type.systemBars())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            binding.root.windowInsetsController?.let {
+                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                it.hide(WindowInsets.Type.systemBars())
+            }
         }
     }
 
@@ -100,11 +123,30 @@ class TrackerActivity : CameraBase() {
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if(mBound) Toast.makeText(this, "${mService.randomNumber} xd", Toast.LENGTH_SHORT).show()
         mScaleDetector.onTouchEvent(ev)
         return true
     }
 
-    // ---
+    // --- BOUND SERVICE
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as NetService.NetBinder
+            mService = binder.getService()
+            mBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound = false
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unbindService(connection)
+        mBound = false
+    }
 
     companion object {
         init {
