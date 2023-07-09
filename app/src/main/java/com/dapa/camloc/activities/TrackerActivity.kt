@@ -48,6 +48,7 @@ class TrackerActivity : CameraBase() {
     override fun onFrame(image: ImageProxy) {
         val x = trackMarker(mat.nativeObjAddr)
         binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
+        if(mBound) mService.setX(x)
         // why is pose estimation unreliable?
         // https://github.com/opencv/opencv/issues/8813
         image.close()
@@ -123,7 +124,6 @@ class TrackerActivity : CameraBase() {
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        if(mBound) Toast.makeText(this, "${mService.randomNumber} xd", Toast.LENGTH_SHORT).show()
         mScaleDetector.onTouchEvent(ev)
         return true
     }
