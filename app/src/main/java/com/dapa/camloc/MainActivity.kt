@@ -16,8 +16,8 @@ import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
-    private lateinit var gatewayIp: InetAddress
-    private lateinit var localIp: InetAddress
+    private var gatewayIp: InetAddress? = null
+    private var localIp: InetAddress? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,32 +25,38 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Note: there were a whole lot of API changes in getting network/interface information
-        // there is no way I'm going to implement all of them (might aswell increment minsdk to 30)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            thread {
-                getIpInfo()
-            }
+        thread {
+            getIpInfo()
         }
 
         binding.launchButton.setOnClickListener {
             // start tracker
-            val myIntent = Intent(this@MainActivity, TrackerActivity::class.java)
-            this@MainActivity.startActivity(myIntent)
+            val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
+            this@MainActivity.startActivity(trackerIntent)
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
-    private fun getIpInfo() {
-        val manager: ConnectivityManager = super.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val linkProps = manager.getLinkProperties(manager.activeNetwork)!!
+    override fun onStart() {
+        super.onStart()
+        // DEBUG
+        // val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
+        // this@MainActivity.startActivity(trackerIntent)
+    }
 
-        gatewayIp = linkProps.dhcpServerAddress!!
-        localIp = linkProps.linkAddresses.map { it.address }.first { it is Inet4Address }
+    private fun getIpInfo() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val manager: ConnectivityManager = super.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            val linkProps = manager.getLinkProperties(manager.activeNetwork)
+
+            if(linkProps != null) {
+                gatewayIp = linkProps.dhcpServerAddress
+                localIp = linkProps.linkAddresses.map { it.address }.first { it is Inet4Address }
+            }
+        }
 
         runOnUiThread {
-            binding.clientText.text = localIp.hostAddress
-            binding.gatewayText.text = gatewayIp.hostAddress
+            binding.clientText.text = localIp?.hostAddress ?: "N/A"
+            binding.gatewayText.text = gatewayIp?.hostAddress ?: "N/A"
         }
     }
 

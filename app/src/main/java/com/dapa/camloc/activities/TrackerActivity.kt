@@ -1,15 +1,21 @@
 package com.dapa.camloc.activities
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Size
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import androidx.annotation.RequiresApi
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
+import com.dapa.camloc.service.NetService
+import android.content.Intent
+import android.util.Log
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -21,37 +27,21 @@ class TrackerActivity : CameraBase() {
     private val resolutionsDisplay = arrayOf<CharSequence>("640x360 nHD", "960x540 qHD", "1280x720 HD", "1600x900 HD+", "1920x1080 HFD", "2560x1440 QHD")
     private val resolutions = arrayOf(Size(640, 360), Size(960, 540), Size(1280,720), Size(1600,900), Size(1920,1080), Size(2560,1440))
     private var currentResolution = 2
-
     private val cameraSelectorDisplay = arrayOf<CharSequence>("Camera facing back", "Ultra-wide lens", "Camera facing front")
 
+    // service
+    private lateinit var mService: NetService
+    private var mBound: Boolean = false
+
     // native function declarations
-    external fun stringFromJNI(): String
-    private external fun detectMarkers(matAddress: Long, drawAddress: Long): Double
     private external fun trackMarker(matAddress: Long): Float
     private external fun setParams(fx: Float, fy: Float, cx:Float, cy:Float)
-
-    // private val draw = Mat()
 
     override fun onBind(): PreviewView = binding.cameraLayout.viewFinder
 
     override fun onFrame(image: ImageProxy) {
         val x = trackMarker(mat.nativeObjAddr)
         binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
-
-        // https://github.com/opencv/opencv/issues/8813
-
-        /*if(cameraConfig != null) {
-            val rx = detectMarkers(mat.nativeObjAddr, draw.nativeObjAddr)
-            // Log.d(TAG, "$rx")
-            if(!rx.isNaN()) {
-                runOnUiThread {
-                    // val bm: Bitmap = Bitmap.createBitmap(mResolution.width, mResolution.height, Bitmap.Config.ARGB_8888)
-                    // Utils.matToBitmap(draw, bm)
-                    // binding.rotationIndicator.setImageBitmap(bm)
-                    binding.rotationIndicator.rotationY = -rx.toFloat()
-                }
-            }
-        }*/
         image.close()
     }
 
@@ -96,14 +86,19 @@ class TrackerActivity : CameraBase() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onResume() {
         super.onResume()
 
-        window.setDecorFitsSystemWindows(false)
-        binding.root.windowInsetsController?.let {
-            it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            it.hide(WindowInsets.Type.systemBars())
+        Intent(this, NetService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            binding.root.windowInsetsController?.let {
+                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                it.hide(WindowInsets.Type.systemBars())
+            }
         }
     }
 
@@ -119,6 +114,27 @@ class TrackerActivity : CameraBase() {
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         mScaleDetector.onTouchEvent(ev)
         return true
+    }
+
+    // ---
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            // We've bound to com.dapa.camloc.service.LocalService, cast the IBinder and get com.dapa.camloc.service.LocalService instance.
+            val binder = service as NetService.LocalBinder
+            mService = binder.getService()
+            mBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound = false
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unbindService(connection)
+        mBound = false
     }
 
     // ---

@@ -121,18 +121,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/extended_fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="36dp"
-        android:layout_marginEnd="10dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:contentDescription="@string/no_access"
-        android:text="@string/go_live"
-        app:icon="@drawable/ic_outline_cell_tower_24"/>
-
     <Button
         android:id="@+id/launch_button"
         style="@style/Widget.Material3.Button.ElevatedButton"

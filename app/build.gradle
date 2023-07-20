@@ -11,7 +11,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.dapa.camloc"
+        applicationId 'com.dapa.camloc'
         minSdk 26
         targetSdk 33
         versionCode 1

@@ -10,7 +10,6 @@ import android.view.View
 import androidx.core.content.ContextCompat
 
 class OverlayView(context: Context, attrs: AttributeSet): View(context, attrs) {
-    // private val markers: MutableList<Marker> = mutableListOf()
     private val paint = Paint().apply {
         style = Paint.Style.STROKE
         color = ContextCompat.getColor(context, android.R.color.holo_red_light)

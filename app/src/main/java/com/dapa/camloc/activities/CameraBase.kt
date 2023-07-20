@@ -3,10 +3,7 @@ package com.dapa.camloc.activities
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -15,8 +12,6 @@ import android.view.MotionEvent
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.camera2.internal.Camera2CameraInfoImpl
-import androidx.camera.camera2.interop.Camera2CameraInfo
-import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.*
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
@@ -33,8 +28,6 @@ import org.opencv.android.Utils
 import org.opencv.core.Mat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.math.PI
-import kotlin.math.atan
 
 // loads opencv and handles camera permissions
 abstract class CameraBase : AppCompatActivity() {
@@ -156,7 +149,7 @@ abstract class CameraBase : AppCompatActivity() {
                 val backCameras = cameraInfos.filterIsInstance<Camera2CameraInfoImpl>()
                     .filter {
                         val pixelWidth = it.cameraCharacteristicsCompat.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)?.width ?: 0
-                        it.lensFacing == CameraSelector.LENS_FACING_BACK && pixelWidth >= 2000 // arbitrary number resolved empirically
+                        it.lensFacing == CameraSelector.LENS_FACING_BACK && pixelWidth > 2000 // arbitrary number resolved empirically
                     }
                 // try to find wide lens camera, if not present, default to general backCameras
                 backCameras.minByOrNull {
