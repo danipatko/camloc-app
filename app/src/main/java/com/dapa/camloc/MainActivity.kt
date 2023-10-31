@@ -9,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
+import com.dapa.camloc.services.DiscoveryService
+import com.dapa.camloc.services.MQTTService
 import java.net.Inet4Address
 import java.net.InetAddress
 import kotlin.concurrent.thread
@@ -26,6 +28,9 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         thread {
+            startService(Intent(this, DiscoveryService::class.java))
+            startService(Intent(this, MQTTService::class.java))
+
             getIpInfo()
         }
 

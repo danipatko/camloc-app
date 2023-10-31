@@ -2,6 +2,7 @@ package com.dapa.camloc.activities
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
@@ -13,11 +14,9 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
-import com.dapa.camloc.service.NetService
-import android.content.Intent
-import android.util.Log
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
+import com.dapa.camloc.services.NetworkService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class TrackerActivity : CameraBase() {
@@ -30,8 +29,8 @@ class TrackerActivity : CameraBase() {
     private val cameraSelectorDisplay = arrayOf<CharSequence>("Camera facing back", "Ultra-wide lens", "Camera facing front")
 
     // service
-    private lateinit var mService: NetService
     private var mBound: Boolean = false
+    private lateinit var mService: NetworkService
 
     // native function declarations
     private external fun trackMarker(matAddress: Long): Float
@@ -42,6 +41,8 @@ class TrackerActivity : CameraBase() {
     override fun onFrame(image: ImageProxy) {
         val x = trackMarker(mat.nativeObjAddr)
         binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
+        // why is pose estimation unreliable?
+        // https://github.com/opencv/opencv/issues/8813
         image.close()
     }
 
@@ -88,8 +89,7 @@ class TrackerActivity : CameraBase() {
 
     override fun onResume() {
         super.onResume()
-
-        Intent(this, NetService::class.java).also { intent ->
+        Intent(this, NetworkService::class.java).also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
 
@@ -120,8 +120,9 @@ class TrackerActivity : CameraBase() {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
+
             // We've bound to com.dapa.camloc.service.LocalService, cast the IBinder and get com.dapa.camloc.service.LocalService instance.
-            val binder = service as NetService.LocalBinder
+            val binder = service as NetworkService.NetBinder
             mService = binder.getService()
             mBound = true
         }
