@@ -91,7 +91,6 @@ class DiscoveryService : Service() {
 
     companion object {
         const val TAG = "DiscoveryService"
-        const val MQTT_PROTOCOL = "mqtt"
         const val NSD_SERVICE_TYPE = "_services._dns-sd._udp"
         const val MDNS_SERVICE_NAME = "_camloc"
         const val MDNS_SERVICE_TYPE = "_mqtt._tcp"

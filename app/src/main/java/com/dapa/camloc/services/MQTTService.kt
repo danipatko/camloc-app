@@ -12,7 +12,6 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import java.nio.ByteBuffer
 
-
 class MQTTService : Service() {
     private var client: MqttClient? = null
     private var connectionString = ""
@@ -48,7 +47,7 @@ class MQTTService : Service() {
                 connect(options)
             }
         } catch (e: MqttException) {
-            Log.d(TAG, "Failed to connect to MQTT broker\n$e")
+            Log.e(TAG, "Failed to connect to MQTT broker\n$e")
         }
     }
 
@@ -66,8 +65,10 @@ class MQTTService : Service() {
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
     fun onConnect(info: BrokerInfo) {
+        Log.d(TAG, "onConnect was fired! ${info.connectionString}")
         connectionString = info.connectionString
-        if(client != null && !client!!.isConnected) {
+        Log.d(TAG, "$client")
+        if(client == null || !client!!.isConnected) {
             reconnect()
         }
     }
