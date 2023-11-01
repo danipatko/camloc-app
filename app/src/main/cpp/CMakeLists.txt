@@ -24,17 +24,6 @@ add_library( # Sets the name of the library.
         # Sets the library as a shared library.
         SHARED
 
-        # Provides a relative path to your source file(s).
-        headers/precomp.hpp
-        headers/tracking.hpp
-        headers/tracking_internals.hpp
-        headers/feature.hpp
-        headers/onlineBoosting.hpp
-        # trackerKCF.legacy.hpp
-        headers/tracking_legacy.hpp
-
-        featureColorName.cpp
-        trackerKCF.cpp
         native-lib.cpp)
 
 # Searches for a specified prebuilt library and stores the path as a

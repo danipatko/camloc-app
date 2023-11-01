@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -16,8 +17,12 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
+import com.dapa.camloc.events.XInfo
 import com.dapa.camloc.services.NetworkService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import org.greenrobot.eventbus.EventBus
+import kotlin.concurrent.thread
+
 
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding
@@ -40,6 +45,7 @@ class TrackerActivity : CameraBase() {
 
     override fun onFrame(image: ImageProxy) {
         val x = trackMarker(mat.nativeObjAddr)
+        Log.d(TAG, "$x")
         binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
         // why is pose estimation unreliable?
         // https://github.com/opencv/opencv/issues/8813

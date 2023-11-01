@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import com.dapa.camloc.events.BrokerInfo
+import com.dapa.camloc.events.XInfo
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.greenrobot.eventbus.EventBus
@@ -59,8 +60,8 @@ class MQTTService : Service() {
     }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
-    fun onFoundX(x: Float) {
-        client?.publish(TOPIC_LOCATE, ByteBuffer.allocate(4).putFloat(x).array(), 0, false)
+    fun onFoundX(x: XInfo) {
+        client?.publish(TOPIC_LOCATE, x.bytes, 0, false)
     }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
