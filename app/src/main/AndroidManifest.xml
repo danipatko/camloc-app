@@ -23,7 +23,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CamLoc"
         tools:targetApi="31">
-        <service android:name=".services.NetworkService" />
         <service android:name=".services.DiscoveryService" />
         <service android:name=".services.MQTTService" />
         <service android:name="org.eclipse.paho.android.service.MqttService"  />

@@ -2,10 +2,10 @@ package com.dapa.camloc.services
 
 import android.app.Service
 import android.content.Intent
+import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.dapa.camloc.events.BrokerInfo
-import com.dapa.camloc.events.XInfo
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.greenrobot.eventbus.EventBus
@@ -41,7 +41,7 @@ class MQTTService : Service() {
                     }
 
                     override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                        Log.d(TAG, "Delivered '${token?.message}'")
+                        // ignore
                     }
                 })
 
@@ -59,9 +59,8 @@ class MQTTService : Service() {
         }
     }
 
-    @Subscribe(threadMode = ThreadMode.BACKGROUND)
-    fun onFoundX(x: XInfo) {
-        client?.publish(TOPIC_LOCATE, x.bytes, 0, false)
+    fun foundX(x: Float) {
+        client?.publish(TOPIC_LOCATE, ByteBuffer.allocate(4).putFloat(x).array(), 0, false)
     }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
@@ -80,8 +79,14 @@ class MQTTService : Service() {
         super.onDestroy()
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
+    // bind to trackeractivity
+    private val binder = ServiceBinder()
+    inner class ServiceBinder : Binder() {
+        fun getService(): MQTTService = this@MQTTService
+    }
+
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
     }
 
     companion object {

@@ -17,10 +17,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
-import com.dapa.camloc.events.XInfo
-import com.dapa.camloc.services.NetworkService
+import com.dapa.camloc.services.MQTTService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import org.greenrobot.eventbus.EventBus
 import kotlin.concurrent.thread
 
 
@@ -35,7 +33,7 @@ class TrackerActivity : CameraBase() {
 
     // service
     private var mBound: Boolean = false
-    private lateinit var mService: NetworkService
+    private lateinit var mService: MQTTService
 
     // native function declarations
     private external fun trackMarker(matAddress: Long): Float
@@ -44,12 +42,17 @@ class TrackerActivity : CameraBase() {
     override fun onBind(): PreviewView = binding.cameraLayout.viewFinder
 
     override fun onFrame(image: ImageProxy) {
-        val x = trackMarker(mat.nativeObjAddr)
-        Log.d(TAG, "$x")
-        binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
-        // why is pose estimation unreliable?
-        // https://github.com/opencv/opencv/issues/8813
-        image.close()
+        thread {
+            val x = trackMarker(mat.nativeObjAddr)
+            if(mBound) {
+                mService.foundX(x)
+            }
+
+            binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
+            // why is pose estimation unreliable?
+            // https://github.com/opencv/opencv/issues/8813
+            image.close()
+        }
     }
 
     override fun onCameraStarted() {
@@ -95,7 +98,7 @@ class TrackerActivity : CameraBase() {
 
     override fun onResume() {
         super.onResume()
-        Intent(this, NetworkService::class.java).also { intent ->
+        Intent(this, MQTTService::class.java).also { intent ->
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
 
@@ -126,9 +129,7 @@ class TrackerActivity : CameraBase() {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-
-            // We've bound to com.dapa.camloc.service.LocalService, cast the IBinder and get com.dapa.camloc.service.LocalService instance.
-            val binder = service as NetworkService.NetBinder
+            val binder = service as MQTTService.ServiceBinder
             mService = binder.getService()
             mBound = true
         }

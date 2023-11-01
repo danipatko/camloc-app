@@ -38,13 +38,13 @@
                     app:tint="?attr/colorOnSecondaryContainer" />
 
                 <TextView
-                    android:id="@+id/organizer_text"
+                    android:id="@+id/broker_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/na"
                     app:layout_constraintEnd_toStartOf="@+id/router_icon"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/organizer_icon" />
+                    app:layout_constraintTop_toBottomOf="@id/broker_icon" />
 
                 <View
                     android:layout_width="0dp"
@@ -52,7 +52,7 @@
                     android:background="?attr/colorSecondaryContainer"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/router_icon"
-                    app:layout_constraintStart_toEndOf="@id/organizer_icon"
+                    app:layout_constraintStart_toEndOf="@id/broker_icon"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
@@ -61,11 +61,11 @@
                     android:layout_height="wrap_content"
                     android:text="@string/na"
                     app:layout_constraintEnd_toStartOf="@+id/client_icon"
-                    app:layout_constraintStart_toEndOf="@id/organizer_icon"
+                    app:layout_constraintStart_toEndOf="@id/broker_icon"
                     app:layout_constraintTop_toBottomOf="@id/router_icon" />
 
                 <ImageView
-                    android:id="@+id/organizer_icon"
+                    android:id="@+id/broker_icon"
                     android:layout_width="70dp"
                     android:layout_height="70dp"
                     android:contentDescription="@string/no_access"

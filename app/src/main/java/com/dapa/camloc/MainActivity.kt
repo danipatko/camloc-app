@@ -4,13 +4,17 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
-import androidx.annotation.RequiresApi
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
+import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.services.DiscoveryService
 import com.dapa.camloc.services.MQTTService
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.net.Inet4Address
 import java.net.InetAddress
 import kotlin.concurrent.thread
@@ -28,6 +32,8 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         thread {
+            EventBus.getDefault().register(this)
+
             startService(Intent(this, DiscoveryService::class.java))
             startService(Intent(this, MQTTService::class.java))
 
@@ -39,13 +45,6 @@ class MainActivity : AppCompatActivity() {
             val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
             this@MainActivity.startActivity(trackerIntent)
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // DEBUG
-        // val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
-        // this@MainActivity.startActivity(trackerIntent)
     }
 
     private fun getIpInfo() {
@@ -63,6 +62,12 @@ class MainActivity : AppCompatActivity() {
             binding.clientText.text = localIp?.hostAddress ?: "N/A"
             binding.gatewayText.text = gatewayIp?.hostAddress ?: "N/A"
         }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onConnect(info: BrokerInfo) {
+        binding.brokerText.text = info.display
+        Toast.makeText(this,  "Broker connected", Toast.LENGTH_SHORT).show()
     }
 
     companion object {
