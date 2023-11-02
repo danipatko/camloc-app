@@ -126,11 +126,18 @@ abstract class CameraBase : AppCompatActivity() {
                 camera.cameraControl.setZoomRatio(mZoomRatio)
                 initialized = true
                 cameraConfig = CameraConfig(this, camera.cameraInfo, mResolution)
+
                 onCameraStarted()
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    fun flash(on: Boolean) {
+        if(camera.cameraInfo.hasFlashUnit()) {
+            camera.cameraControl.enableTorch(on)
+        }
     }
 
     inner class ImageAnalyzer : ImageAnalysis.Analyzer {

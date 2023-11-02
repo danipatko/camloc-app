@@ -7,7 +7,6 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -45,7 +44,20 @@ class TrackerActivity : CameraBase() {
         thread {
             val x = trackMarker(mat.nativeObjAddr)
             if(mBound) {
-                mService.foundX(x)
+                mService.pubLocation(x)
+
+                if(mService.shouldFlash) {
+                    mService.shouldFlash = false
+                    thread {
+                        flash(true)
+                        Thread.sleep(500)
+                        flash(false)
+                    }
+                }
+
+                if(mService.shouldClose) {
+                    finish()
+                }
             }
 
             binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)

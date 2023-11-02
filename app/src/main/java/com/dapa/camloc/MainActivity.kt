@@ -4,12 +4,12 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
 import com.dapa.camloc.events.BrokerInfo
+import com.dapa.camloc.events.Empty
 import com.dapa.camloc.services.DiscoveryService
 import com.dapa.camloc.services.MQTTService
 import org.greenrobot.eventbus.EventBus
@@ -24,6 +24,8 @@ class MainActivity : AppCompatActivity() {
 
     private var gatewayIp: InetAddress? = null
     private var localIp: InetAddress? = null
+
+    private var launched = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +46,13 @@ class MainActivity : AppCompatActivity() {
             // start tracker
             val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
             this@MainActivity.startActivity(trackerIntent)
+            launched = true
         }
+    }
+
+    override fun onResume() {
+        launched = false
+        super.onResume()
     }
 
     private fun getIpInfo() {
@@ -65,9 +73,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onOpenTracker(nothing: Empty) {
+        if(!launched) {
+            val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
+            this@MainActivity.startActivity(trackerIntent)
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
     fun onConnect(info: BrokerInfo) {
         binding.brokerText.text = info.display
-        Toast.makeText(this,  "Broker connected", Toast.LENGTH_SHORT).show()
     }
 
     companion object {
