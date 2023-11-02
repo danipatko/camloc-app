@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -56,6 +57,7 @@ class TrackerActivity : CameraBase() {
                 }
 
                 if(mService.shouldClose) {
+                    Log.d(TAG, "FINISHING NOW")
                     finish()
                 }
             }

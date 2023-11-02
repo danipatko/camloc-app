@@ -25,11 +25,13 @@ class MQTTService : Service() {
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         EventBus.getDefault().register(this)
+        shouldClose = false
         return START_STICKY
     }
 
     fun reconnect(): Boolean {
         val clientId = MqttClient.generateClientId()
+        Log.d(TAG, "generated $clientId id")
 
         try {
             client = MqttClient(connectionString, clientId, MemoryPersistence()).apply {
@@ -49,19 +51,13 @@ class MQTTService : Service() {
                     }
 
                     override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                         // Log.d(TAG, "deliveryComplete ${token?.messageId}")
+                         Log.d(TAG, "deliveryComplete ${token?.messageId}")
                     }
                 })
 
                 connect(options)
                 // subs here
-                subscribe(TOPIC_ASK_CONFIG)
-                subscribe(TOPIC_FLASH)
-
-                subscribe(TOPIC_CAM_ON)
-                subscribe(TOPIC_CAM_OFF)
-                subscribe(TOPIC_THIS_CAM_ON)
-                subscribe(TOPIC_THIS_CAM_OFF)
+                subscribe(arrayOf(TOPIC_ASK_CONFIG, TOPIC_FLASH, TOPIC_CAM_ON, TOPIC_CAM_OFF, TOPIC_THIS_CAM_ON, TOPIC_THIS_CAM_OFF, TOPIC_DISCONNECT))
             }
             return true
         } catch (e: MqttException) {
@@ -103,9 +99,10 @@ class MQTTService : Service() {
     }
 
     private fun pubConfig() {
+        Log.d(TAG, replaceWildcard(TOPIC_GET_CONFIG))
         client?.publish(replaceWildcard(TOPIC_GET_CONFIG),
             // x, y, rot
-            ByteBuffer.allocate(4 * 3).putFloat(1f).putFloat(2f).putFloat(3f).array(), 0, false)
+            ByteBuffer.allocate(4 * 3).putFloat(1f).putFloat(2f).putFloat(3f).array(), 2, false)
     }
 
     fun pubLocation(x: Float) {
@@ -145,6 +142,7 @@ class MQTTService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder {
+        shouldClose = false
         return binder
     }
 
