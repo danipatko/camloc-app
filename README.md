@@ -1,3 +1,14 @@
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+![shid](https://img.shields.io/badge/camed✅-loced✅-82aaff) 
+
+
 le broker
 
 ```shell
