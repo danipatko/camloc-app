@@ -44,10 +44,12 @@ class TrackerActivity : CameraBase() {
     override fun onFrame(image: ImageProxy) {
         thread {
             val x = trackMarker(mat.nativeObjAddr)
+            binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
+
             if(mBound) {
                 mService.pubLocation(x)
 
-                if(mService.shouldFlash) {
+                /*if(mService.shouldFlash) {
                     mService.shouldFlash = false
                     thread {
                         flash(true)
@@ -57,12 +59,11 @@ class TrackerActivity : CameraBase() {
                 }
 
                 if(mService.shouldClose) {
-                    Log.d(TAG, "FINISHING NOW")
+                    mService.shouldClose = false
                     finish()
-                }
+                }*/
             }
 
-            binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
             // why is pose estimation unreliable?
             // https://github.com/opencv/opencv/issues/8813
             image.close()

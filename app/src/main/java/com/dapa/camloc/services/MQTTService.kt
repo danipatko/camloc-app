@@ -9,11 +9,11 @@ import android.widget.Toast
 import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.events.Empty
 import org.eclipse.paho.client.mqttv3.*
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import java.nio.ByteBuffer
+import kotlin.concurrent.thread
 
 class MQTTService : Service() {
     private var client: MqttClient? = null
@@ -22,6 +22,7 @@ class MQTTService : Service() {
 
     var shouldFlash = false
     var shouldClose = false
+    private var isBound = false
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         EventBus.getDefault().register(this)
@@ -29,15 +30,35 @@ class MQTTService : Service() {
         return START_STICKY
     }
 
+    // replaces the topic wildcard with the client id
+    private fun replaceWildcard(topic: String, clientId: String ?= null): String {
+        return topic.replace(Regex("\\+"), clientId ?: (client?.clientId ?: "lost"))
+    }
+
+    private fun pub(topic: String, payload: ByteArray) {
+        client?.publish(replaceWildcard(topic), payload, QOS, RETAIN)
+    }
+
+    private fun pub(topic: String, payload: FloatArray) {
+        val buf = ByteBuffer.allocate(Float.SIZE_BYTES * payload.size)
+        for (x in payload) buf.putFloat(x)
+        client?.publish(replaceWildcard(topic), buf.array(), QOS, RETAIN)
+    }
+
+    private fun pub(topic: String, payload: Boolean) {
+        val buf = ByteBuffer.allocate(1).put(if(payload) 0x1 else 0x0)
+        client?.publish(replaceWildcard(topic), buf.array(), QOS, RETAIN)
+    }
+
     fun reconnect(): Boolean {
         val clientId = MqttClient.generateClientId()
         Log.d(TAG, "generated $clientId id")
 
         try {
-            client = MqttClient(connectionString, clientId, MemoryPersistence()).apply {
+            client = MqttClient(connectionString, clientId, null).apply {
                 // connect
                 val options = MqttConnectOptions()
-                options.isCleanSession = true
+                options.isCleanSession = false
                 // pub disconnect
                 options.setWill(replaceWildcard(TOPIC_DISCONNECT, this.clientId), ByteArray(0), 0, false)
 
@@ -51,13 +72,13 @@ class MQTTService : Service() {
                     }
 
                     override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                         Log.d(TAG, "deliveryComplete ${token?.messageId}")
+                         // Log.d(TAG, "deliveryComplete ${token?.messageId}")
                     }
                 })
 
                 connect(options)
                 // subs here
-                subscribe(arrayOf(TOPIC_ASK_CONFIG, TOPIC_FLASH, TOPIC_CAM_ON, TOPIC_CAM_OFF, TOPIC_THIS_CAM_ON, TOPIC_THIS_CAM_OFF, TOPIC_DISCONNECT))
+                subscribe(arrayOf(TOPIC_ASK_CONFIG, TOPIC_FLASH, TOPIC_DISCONNECT, TOPIC_ASK_STATE, TOPIC_SET_ALL_STATE, TOPIC_SET_STATE))
             }
             return true
         } catch (e: MqttException) {
@@ -67,20 +88,19 @@ class MQTTService : Service() {
     }
 
     fun handleMessage(topic: String?, message: MqttMessage?) {
-        Log.d(TAG, "Got message $topic")
+        thread {
+            Log.d(TAG, "Got message $topic: $message")
+            when(topic) {
+                TOPIC_ASK_CONFIG -> pubConfig()
+                TOPIC_ASK_STATE -> pub(TOPIC_PUB_STATE, isBound)
 
-        when(topic) {
-            TOPIC_ASK_CONFIG -> pubConfig()
+                TOPIC_SET_ALL_STATE -> if(message != null) handleSetState(message.payload)
+                replaceWildcard(TOPIC_SET_STATE) -> if(message != null) handleSetState(message.payload)
 
-            TOPIC_CAM_ON -> handleCamState(true)
-            replaceWildcard(TOPIC_THIS_CAM_ON) -> handleCamState(true)
+                replaceWildcard(TOPIC_FLASH) -> handleFlash()
 
-            TOPIC_CAM_OFF -> handleCamState(false)
-            replaceWildcard(TOPIC_THIS_CAM_OFF) -> handleCamState(false)
-
-            replaceWildcard(TOPIC_FLASH) -> handleFlash()
-
-            else -> Log.d(TAG, message.toString())
+                else -> Log.d(TAG, message.toString())
+            }
         }
     }
 
@@ -90,25 +110,24 @@ class MQTTService : Service() {
         }
     }
 
-    private fun handleCamState(on: Boolean) {
-        if(on) {
-            EventBus.getDefault().post(Empty())
-        } else {
+    private fun handleSetState(payload: ByteArray) {
+        if(payload[0] == 0x0.toByte()) {
             shouldClose = true
+        } else {
+            EventBus.getDefault().post(Empty())
         }
     }
 
     private fun pubConfig() {
-        Log.d(TAG, replaceWildcard(TOPIC_GET_CONFIG))
-        client?.publish(replaceWildcard(TOPIC_GET_CONFIG),
-            // x, y, rot
-            ByteBuffer.allocate(4 * 3).putFloat(1f).putFloat(2f).putFloat(3f).array(), 2, false)
+        // TODO CONFIG ui
+        // x, y, rot
+        pub(TOPIC_PUB_CONFIG, floatArrayOf(1f, 2f, 3f))
     }
 
     fun pubLocation(x: Float) {
         if(lastX.isNaN() && x.isNaN()) return
         lastX = x
-        client?.publish(replaceWildcard(TOPIC_LOCATE), ByteBuffer.allocate(4).putFloat(x).array(), 0, false)
+        pub(TOPIC_PUB_LOCATE, floatArrayOf(x))
     }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
@@ -122,11 +141,6 @@ class MQTTService : Service() {
                 pubConfig()
             }
         }
-    }
-
-    // replaces the topic wildcard with the client id
-    private fun replaceWildcard(topic: String, clientId: String ?= null): String {
-        return topic.replace(Regex("\\+"), clientId ?: (client?.clientId ?: "lost"))
     }
 
     override fun onDestroy() {
@@ -143,25 +157,38 @@ class MQTTService : Service() {
 
     override fun onBind(intent: Intent?): IBinder {
         shouldClose = false
+        isBound = true
+        pub(TOPIC_PUB_STATE, true)
         return binder
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        isBound = false
+        pub(TOPIC_PUB_STATE, false)
+        return super.onUnbind(intent)
     }
 
     companion object {
         const val TAG = "MQTTService"
 
-        const val TOPIC_LOCATE = "camloc/+/locate"
+        // pub
+        const val TOPIC_PUB_LOCATE = "camloc/+/locate"
+        const val TOPIC_PUB_CONFIG = "camloc/+/config"
+        const val TOPIC_PUB_STATE = "camloc/+/state"
+
+        // sub
         const val TOPIC_DISCONNECT = "camloc/+/dc"
 
-        const val TOPIC_GET_CONFIG = "camloc/+/config/get"
+        const val TOPIC_ASK_CONFIG = "camloc/config"
         const val TOPIC_SET_CONFIG = "camloc/+/config/set"
 
         const val TOPIC_FLASH = "camloc/+/flash"
 
-        const val TOPIC_CAM_ON = "camloc/camstate/on"
-        const val TOPIC_CAM_OFF = "camloc/camstate/off"
-        const val TOPIC_THIS_CAM_ON = "camloc/+/camstate/on"
-        const val TOPIC_THIS_CAM_OFF = "camloc/+/camstate/off"
+        const val TOPIC_ASK_STATE = "camloc/state"
+        const val TOPIC_SET_STATE = "camloc/+/state/set"
+        const val TOPIC_SET_ALL_STATE = "camloc/state/set"
 
-        const val TOPIC_ASK_CONFIG = "camloc/config"
+        const val QOS = 0
+        const val RETAIN = false
     }
 }
