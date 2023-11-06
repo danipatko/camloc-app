@@ -49,7 +49,7 @@ class TrackerActivity : CameraBase() {
             if(mBound) {
                 mService.pubLocation(x)
 
-                /*if(mService.shouldFlash) {
+                if(mService.shouldFlash) {
                     mService.shouldFlash = false
                     thread {
                         flash(true)
@@ -61,7 +61,7 @@ class TrackerActivity : CameraBase() {
                 if(mService.shouldClose) {
                     mService.shouldClose = false
                     finish()
-                }*/
+                }
             }
 
             // why is pose estimation unreliable?
@@ -71,8 +71,8 @@ class TrackerActivity : CameraBase() {
     }
 
     override fun onCameraStarted() {
-        if(cameraConfig != null)
-            setParams(cameraConfig!!.focalLengthX, cameraConfig!!.focalLengthY, cameraConfig!!.cX, cameraConfig!!.cY)
+        //if(cameraConfig != null)
+        //    setParams(cameraConfig!!.focalLengthX, cameraConfig!!.focalLengthY, cameraConfig!!.cX, cameraConfig!!.cY)
     }
 
     // ---

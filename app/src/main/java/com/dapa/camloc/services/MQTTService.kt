@@ -7,6 +7,7 @@ import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import com.dapa.camloc.events.BrokerInfo
+import com.dapa.camloc.events.BrokerState
 import com.dapa.camloc.events.Empty
 import org.eclipse.paho.client.mqttv3.*
 import org.greenrobot.eventbus.EventBus
@@ -69,6 +70,7 @@ class MQTTService : Service() {
 
                     override fun connectionLost(cause: Throwable?) {
                         Log.e(TAG, "Lost broker connection")
+                        EventBus.getDefault().post(BrokerState(false))
                     }
 
                     override fun deliveryComplete(token: IMqttDeliveryToken?) {
@@ -139,6 +141,7 @@ class MQTTService : Service() {
             Toast.makeText(this, if(success) "Broker connected" else "Connection failed", Toast.LENGTH_SHORT).show()
             if(success) {
                 pubConfig()
+                EventBus.getDefault().post(BrokerState(true))
             }
         }
     }

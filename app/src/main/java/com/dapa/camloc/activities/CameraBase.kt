@@ -48,7 +48,6 @@ abstract class CameraBase : AppCompatActivity() {
 
     private lateinit var camera: Camera
     private var initialized: Boolean = false
-    var cameraConfig: CameraConfig? = null
 
     var mCameraIndex : Int = 0
         set(value) {
@@ -125,7 +124,6 @@ abstract class CameraBase : AppCompatActivity() {
                 camera = cameraProvider.bindToLifecycle(this, cameraSelector, useCaseGroup)
                 camera.cameraControl.setZoomRatio(mZoomRatio)
                 initialized = true
-                cameraConfig = CameraConfig(this, camera.cameraInfo, mResolution)
 
                 onCameraStarted()
             } catch(exc: Exception) {

@@ -4,9 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fitsSystemWindows="true"
@@ -20,7 +23,7 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="182dp"
                 android:fitsSystemWindows="true">
 
                 <ImageView
@@ -110,6 +113,16 @@
                     app:srcCompat="@drawable/ic_baseline_smartphone_24"
                     app:tint="?attr/colorOnSecondaryContainer" />
 
+                <TextView
+                    android:id="@+id/broker_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    android:gravity="center"
+                    android:text="Waiting for broker connection"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <com.google.android.material.appbar.MaterialToolbar
@@ -118,8 +131,45 @@
                 android:background="@android:color/transparent" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
-
     </com.google.android.material.appbar.AppBarLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/position_x"
+        android:layout_width="match_parent"
+        app:layout_constraintTop_toBottomOf="@id/appbar"
+        android:layout_height="0dp"
+        android:padding="10dp"
+        android:hint="@string/posx">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/position_y"
+        android:layout_width="match_parent"
+        app:layout_constraintTop_toBottomOf="@id/position_x"
+        android:layout_height="0dp"
+        android:paddingHorizontal="10dp"
+        android:paddingBottom="10dp"
+        android:hint="@string/posy">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/rotation"
+        android:layout_width="match_parent"
+        app:layout_constraintTop_toBottomOf="@id/position_y"
+        android:paddingBottom="10dp"
+        android:paddingHorizontal="10dp"
+        android:layout_height="0dp"
+        android:hint="@string/rot">
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <Button
         android:id="@+id/launch_button"
@@ -127,7 +177,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/launch_detection"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rotation"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

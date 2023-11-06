@@ -5,4 +5,7 @@
     <string name="na">N/A</string>
     <string name="launch_detection">Launch detection</string>
     <string name="go_live">Go live</string>
+    <string name="posx">X position</string>
+    <string name="posy">Y position</string>
+    <string name="rot">Camera rotation</string>
 </resources>
