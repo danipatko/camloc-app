@@ -1,32 +1,21 @@
 package com.dapa.camloc
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
 import android.net.ConnectivityManager
-import android.net.Network
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.camera2.interop.Camera2CameraInfo
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.CameraSelector.LensFacing
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
 import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.events.BrokerState
-import com.dapa.camloc.events.Empty
+import com.dapa.camloc.events.StartTrackerActivity
 import com.dapa.camloc.services.DiscoveryService
 import com.dapa.camloc.services.MQTTService
 import org.greenrobot.eventbus.EventBus
@@ -35,8 +24,6 @@ import org.greenrobot.eventbus.ThreadMode
 import java.net.Inet4Address
 import java.net.InetAddress
 import kotlin.concurrent.thread
-import kotlin.math.PI
-import kotlin.math.atan
 
 
 class MainActivity : AppCompatActivity() {
@@ -53,15 +40,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        EventBus.getDefault().register(this)
 
         thread {
-            EventBus.getDefault().register(this)
-
             startService(Intent(this, DiscoveryService::class.java))
             startService(Intent(this, MQTTService::class.java))
 
             getIpInfo()
-
         }
 
         binding.launchButton.setOnClickListener {
@@ -98,7 +83,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onOpenTracker(nothing: Empty) {
+    fun onStartTrackerActivity(nothing: StartTrackerActivity) {
         if(!launched) {
             val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
             this@MainActivity.startActivity(trackerIntent)
@@ -113,8 +98,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onBrokerStatusChange(ev: BrokerState) {
+    fun onBrokerState(ev: BrokerState) {
         binding.brokerStatus.text = if(ev.connected) "Connected" else "Lost broker connection"
+    }
+
+    override fun onStop() {
+        EventBus.getDefault().unregister(this)
+        return super.onStop()
     }
 
     // focus fix

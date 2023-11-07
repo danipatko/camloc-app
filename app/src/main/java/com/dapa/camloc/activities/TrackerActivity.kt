@@ -48,20 +48,6 @@ class TrackerActivity : CameraBase() {
 
             if(mBound) {
                 mService.pubLocation(x)
-
-                if(mService.shouldFlash) {
-                    mService.shouldFlash = false
-                    thread {
-                        flash(true)
-                        Thread.sleep(500)
-                        flash(false)
-                    }
-                }
-
-                if(mService.shouldClose) {
-                    mService.shouldClose = false
-                    finish()
-                }
             }
 
             // why is pose estimation unreliable?
@@ -73,6 +59,12 @@ class TrackerActivity : CameraBase() {
     override fun onCameraStarted() {
         //if(cameraConfig != null)
         //    setParams(cameraConfig!!.focalLengthX, cameraConfig!!.focalLengthY, cameraConfig!!.cX, cameraConfig!!.cY)
+    }
+
+    override fun onCameraIndexChanged(cameraIndex: Int) {
+        if(mBound) {
+            mService.mCameraIndex = cameraIndex
+        }
     }
 
     // ---
@@ -147,6 +139,24 @@ class TrackerActivity : CameraBase() {
             val binder = service as MQTTService.ServiceBinder
             mService = binder.getService()
             mBound = true
+
+            mService.setOnChangeListener(object : MQTTService.OnChangeListener {
+                override fun onChanged(progress: Int) {
+                    TODO("Not yet implemented")
+                }
+
+                override fun onFinish() {
+                    finish()
+                }
+
+                override fun onFlash() {
+                    thread {
+                        flash(true)
+                        Thread.sleep(500)
+                        flash(false)
+                    }
+                }
+            })
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {

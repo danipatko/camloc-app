@@ -6,9 +6,10 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
+import com.dapa.camloc.CameraConfig
 import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.events.BrokerState
-import com.dapa.camloc.events.Empty
+import com.dapa.camloc.events.StartTrackerActivity
 import org.eclipse.paho.client.mqttv3.*
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -19,15 +20,20 @@ import kotlin.concurrent.thread
 class MQTTService : Service() {
     private var client: MqttClient? = null
     private var connectionString = ""
+    private var isBound = false
+
     private var lastX = Float.NaN
 
-    var shouldFlash = false
-    var shouldClose = false
-    private var isBound = false
+    private lateinit var mCameraConfig: CameraConfig
+    var mCameraIndex: Int = 0
+        set(value) {
+            field = value
+            pubConfig()
+        }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         EventBus.getDefault().register(this)
-        shouldClose = false
+        mCameraConfig = CameraConfig(this)
         return START_STICKY
     }
 
@@ -99,31 +105,25 @@ class MQTTService : Service() {
                 TOPIC_SET_ALL_STATE -> if(message != null) handleSetState(message.payload)
                 replaceWildcard(TOPIC_SET_STATE) -> if(message != null) handleSetState(message.payload)
 
-                replaceWildcard(TOPIC_FLASH) -> handleFlash()
+                replaceWildcard(TOPIC_FLASH) -> mChangeListener.onFlash()
 
                 else -> Log.d(TAG, message.toString())
             }
         }
     }
 
-    private fun handleFlash() {
-        if(client != null) {
-            shouldFlash = true
-        }
-    }
-
     private fun handleSetState(payload: ByteArray) {
         if(payload[0] == 0x0.toByte()) {
-            shouldClose = true
+            mChangeListener.onFinish()
         } else {
-            EventBus.getDefault().post(Empty())
+            EventBus.getDefault().post(StartTrackerActivity())
         }
     }
 
     private fun pubConfig() {
-        // TODO CONFIG ui
-        // x, y, rot
-        pub(TOPIC_PUB_CONFIG, floatArrayOf(1f, 2f, 3f))
+        // TODO get config
+        // x, y, rot, fov
+        pub(TOPIC_PUB_CONFIG, floatArrayOf(1f, 2f, 3f, mCameraConfig.cameraParams[mCameraIndex].fovX))
     }
 
     fun pubLocation(x: Float) {
@@ -158,16 +158,30 @@ class MQTTService : Service() {
         fun getService(): MQTTService = this@MQTTService
     }
 
+    // ---
+
+    interface OnChangeListener {
+        fun onChanged(progress: Int)
+        fun onFlash()
+        fun onFinish()
+    }
+
+    private lateinit var mChangeListener: OnChangeListener
+    fun setOnChangeListener(onChangeListener: OnChangeListener) {
+        mChangeListener = onChangeListener
+    }
+
     override fun onBind(intent: Intent?): IBinder {
-        shouldClose = false
         isBound = true
         pub(TOPIC_PUB_STATE, true)
+
         return binder
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         isBound = false
         pub(TOPIC_PUB_STATE, false)
+
         return super.onUnbind(intent)
     }
 

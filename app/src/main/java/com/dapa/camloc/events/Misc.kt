@@ -1,7 +1,6 @@
 package com.dapa.camloc.events
 
-class Empty () {
-}
+class StartTrackerActivity
 
 class BrokerState (isConnected: Boolean) {
     val connected: Boolean

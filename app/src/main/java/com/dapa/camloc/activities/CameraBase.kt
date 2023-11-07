@@ -54,6 +54,7 @@ abstract class CameraBase : AppCompatActivity() {
             field = value
             // if camera is running, restart
             if(initialized) startCamera()
+            onCameraIndexChanged(value)
         }
 
     var mResolution: Size = Size(1280, 720)
@@ -174,6 +175,9 @@ abstract class CameraBase : AppCompatActivity() {
 
     // called after successful camera launch
     open fun onCameraStarted() {}
+
+    // called on camera selection change
+    open fun onCameraIndexChanged(cameraIndex: Int) {}
 
     // ---
 
