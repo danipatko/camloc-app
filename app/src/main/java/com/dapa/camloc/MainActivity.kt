@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
@@ -34,7 +35,6 @@ class MainActivity : AppCompatActivity() {
 
     private var launched = false
 
-    @androidx.annotation.OptIn(androidx.camera.camera2.interop.ExperimentalCamera2Interop::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -99,7 +99,9 @@ class MainActivity : AppCompatActivity() {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onBrokerState(ev: BrokerState) {
-        binding.brokerStatus.text = if(ev.connected) "Connected" else "Lost broker connection"
+        val txt = if(ev.connected) "Connected" else "Lost broker connection"
+        Toast.makeText(this, txt, Toast.LENGTH_SHORT).show()
+        binding.brokerStatus.text = txt
     }
 
     override fun onStop() {

@@ -7,6 +7,7 @@ import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import com.dapa.camloc.CameraConfig
+import com.dapa.camloc.MQTTClientWrapper
 import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.events.BrokerState
 import com.dapa.camloc.events.StartTrackerActivity
@@ -18,137 +19,49 @@ import java.nio.ByteBuffer
 import kotlin.concurrent.thread
 
 class MQTTService : Service() {
-    private var client: MqttClient? = null
-    private var connectionString = ""
-    private var isBound = false
-
-    private var lastX = Float.NaN
+    lateinit var client: MQTTClientWrapper
 
     private lateinit var mCameraConfig: CameraConfig
     var mCameraIndex: Int = 0
         set(value) {
             field = value
-            pubConfig()
+            //
         }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         EventBus.getDefault().register(this)
         mCameraConfig = CameraConfig(this)
+
+        client = MQTTClientWrapper().apply {
+            setMessageListener(object : MQTTClientWrapper.OnMessageListener {
+                override fun onConnectionLost() {
+                    EventBus.getDefault().post(BrokerState(false))
+                }
+
+                override fun onFinish() {
+                    mChangeListener.onFinish()
+                }
+
+                override fun onFlash() {
+                    mChangeListener.onFlash()
+                }
+            })
+        }
+
         return START_STICKY
-    }
-
-    // replaces the topic wildcard with the client id
-    private fun replaceWildcard(topic: String, clientId: String ?= null): String {
-        return topic.replace(Regex("\\+"), clientId ?: (client?.clientId ?: "lost"))
-    }
-
-    private fun pub(topic: String, payload: ByteArray) {
-        client?.publish(replaceWildcard(topic), payload, QOS, RETAIN)
-    }
-
-    private fun pub(topic: String, payload: FloatArray) {
-        val buf = ByteBuffer.allocate(Float.SIZE_BYTES * payload.size)
-        for (x in payload) buf.putFloat(x)
-        client?.publish(replaceWildcard(topic), buf.array(), QOS, RETAIN)
-    }
-
-    private fun pub(topic: String, payload: Boolean) {
-        val buf = ByteBuffer.allocate(1).put(if(payload) 0x1 else 0x0)
-        client?.publish(replaceWildcard(topic), buf.array(), QOS, RETAIN)
-    }
-
-    fun reconnect(): Boolean {
-        val clientId = MqttClient.generateClientId()
-        Log.d(TAG, "generated $clientId id")
-
-        try {
-            client = MqttClient(connectionString, clientId, null).apply {
-                // connect
-                val options = MqttConnectOptions()
-                options.isCleanSession = false
-                // pub disconnect
-                options.setWill(replaceWildcard(TOPIC_DISCONNECT, this.clientId), ByteArray(0), 0, false)
-
-                setCallback(object : MqttCallback {
-                    override fun messageArrived(topic: String?, message: MqttMessage?) {
-                        handleMessage(topic, message)
-                    }
-
-                    override fun connectionLost(cause: Throwable?) {
-                        Log.e(TAG, "Lost broker connection")
-                        EventBus.getDefault().post(BrokerState(false))
-                    }
-
-                    override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                         // Log.d(TAG, "deliveryComplete ${token?.messageId}")
-                    }
-                })
-
-                connect(options)
-                // subs here
-                subscribe(arrayOf(TOPIC_ASK_CONFIG, TOPIC_FLASH, TOPIC_DISCONNECT, TOPIC_ASK_STATE, TOPIC_SET_ALL_STATE, TOPIC_SET_STATE))
-            }
-            return true
-        } catch (e: MqttException) {
-            Log.e(TAG, "Failed to connect to MQTT broker\n$e")
-            return false
-        }
-    }
-
-    fun handleMessage(topic: String?, message: MqttMessage?) {
-        thread {
-            Log.d(TAG, "Got message $topic: $message")
-            when(topic) {
-                TOPIC_ASK_CONFIG -> pubConfig()
-                TOPIC_ASK_STATE -> pub(TOPIC_PUB_STATE, isBound)
-
-                TOPIC_SET_ALL_STATE -> if(message != null) handleSetState(message.payload)
-                replaceWildcard(TOPIC_SET_STATE) -> if(message != null) handleSetState(message.payload)
-
-                replaceWildcard(TOPIC_FLASH) -> mChangeListener.onFlash()
-
-                else -> Log.d(TAG, message.toString())
-            }
-        }
-    }
-
-    private fun handleSetState(payload: ByteArray) {
-        if(payload[0] == 0x0.toByte()) {
-            mChangeListener.onFinish()
-        } else {
-            EventBus.getDefault().post(StartTrackerActivity())
-        }
-    }
-
-    private fun pubConfig() {
-        // TODO get config
-        // x, y, rot, fov
-        pub(TOPIC_PUB_CONFIG, floatArrayOf(1f, 2f, 3f, mCameraConfig.cameraParams[mCameraIndex].fovX))
-    }
-
-    fun pubLocation(x: Float) {
-        if(lastX.isNaN() && x.isNaN()) return
-        lastX = x
-        pub(TOPIC_PUB_LOCATE, floatArrayOf(x))
     }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
     fun onConnect(info: BrokerInfo) {
         Log.d(TAG, "onConnect was fired! ${info.connectionString}")
-        connectionString = info.connectionString
-        if(client == null || !client!!.isConnected) {
-            val success = reconnect()
-            Toast.makeText(this, if(success) "Broker connected" else "Connection failed", Toast.LENGTH_SHORT).show()
-            if(success) {
-                pubConfig()
-                EventBus.getDefault().post(BrokerState(true))
-            }
-        }
+
+        val success = client.connect(info.connectionString)
+        EventBus.getDefault().post(BrokerState(success))
     }
 
     override fun onDestroy() {
         EventBus.getDefault().unregister(this)
-        client?.disconnect()
+        client.destroy()
         super.onDestroy()
     }
 
@@ -172,40 +85,16 @@ class MQTTService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder {
-        isBound = true
-        pub(TOPIC_PUB_STATE, true)
-
+        client.isBound = true
         return binder
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        isBound = false
-        pub(TOPIC_PUB_STATE, false)
-
+        client.isBound = false
         return super.onUnbind(intent)
     }
 
     companion object {
         const val TAG = "MQTTService"
-
-        // pub
-        const val TOPIC_PUB_LOCATE = "camloc/+/locate"
-        const val TOPIC_PUB_CONFIG = "camloc/+/config"
-        const val TOPIC_PUB_STATE = "camloc/+/state"
-
-        // sub
-        const val TOPIC_DISCONNECT = "camloc/+/dc"
-
-        const val TOPIC_ASK_CONFIG = "camloc/config"
-        const val TOPIC_SET_CONFIG = "camloc/+/config/set"
-
-        const val TOPIC_FLASH = "camloc/+/flash"
-
-        const val TOPIC_ASK_STATE = "camloc/state"
-        const val TOPIC_SET_STATE = "camloc/+/state/set"
-        const val TOPIC_SET_ALL_STATE = "camloc/state/set"
-
-        const val QOS = 0
-        const val RETAIN = false
     }
 }

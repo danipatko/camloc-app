@@ -47,7 +47,7 @@ class TrackerActivity : CameraBase() {
             binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
 
             if(mBound) {
-                mService.pubLocation(x)
+                mService.client.lastX = x
             }
 
             // why is pose estimation unreliable?
