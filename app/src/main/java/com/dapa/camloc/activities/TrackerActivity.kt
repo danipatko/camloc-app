@@ -105,10 +105,6 @@ class TrackerActivity : CameraBase() {
 
     override fun onResume() {
         super.onResume()
-        Intent(this, MQTTService::class.java).also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             binding.root.windowInsetsController?.let {
@@ -138,13 +134,11 @@ class TrackerActivity : CameraBase() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as MQTTService.ServiceBinder
             mService = binder.getService()
+
             mBound = true
+            mService.client.isBound = true
 
             mService.setOnChangeListener(object : MQTTService.OnChangeListener {
-                override fun onChanged(progress: Int) {
-                    TODO("Not yet implemented")
-                }
-
                 override fun onFinish() {
                     finish()
                 }
@@ -164,10 +158,18 @@ class TrackerActivity : CameraBase() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        Intent(this, MQTTService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
     override fun onStop() {
         super.onStop()
-        unbindService(connection)
+        mService.client.isBound = false
         mBound = false
+        unbindService(connection)
     }
 
     // ---

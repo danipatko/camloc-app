@@ -5,27 +5,21 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import android.widget.Toast
 import com.dapa.camloc.CameraConfig
 import com.dapa.camloc.MQTTClientWrapper
 import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.events.BrokerState
-import com.dapa.camloc.events.StartTrackerActivity
-import org.eclipse.paho.client.mqttv3.*
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
-import java.nio.ByteBuffer
-import kotlin.concurrent.thread
 
 class MQTTService : Service() {
     lateinit var client: MQTTClientWrapper
 
-    private lateinit var mCameraConfig: CameraConfig
+    lateinit var mCameraConfig: CameraConfig
     var mCameraIndex: Int = 0
         set(value) {
             field = value
-            //
         }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -74,7 +68,6 @@ class MQTTService : Service() {
     // ---
 
     interface OnChangeListener {
-        fun onChanged(progress: Int)
         fun onFlash()
         fun onFinish()
     }
@@ -84,14 +77,8 @@ class MQTTService : Service() {
         mChangeListener = onChangeListener
     }
 
-    override fun onBind(intent: Intent?): IBinder {
-        client.isBound = true
+    override fun onBind(intent: Intent): IBinder {
         return binder
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        client.isBound = false
-        return super.onUnbind(intent)
     }
 
     companion object {

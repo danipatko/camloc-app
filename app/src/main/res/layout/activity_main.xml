@@ -141,6 +141,7 @@
         android:padding="10dp"
         android:hint="@string/posx">
         <com.google.android.material.textfield.TextInputEditText
+            android:inputType="numberDecimal|numberSigned"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -154,6 +155,7 @@
         android:paddingBottom="10dp"
         android:hint="@string/posy">
         <com.google.android.material.textfield.TextInputEditText
+            android:inputType="numberDecimal|numberSigned"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -167,9 +169,20 @@
         android:layout_height="0dp"
         android:hint="@string/rot">
         <com.google.android.material.textfield.TextInputEditText
+            android:inputType="numberDecimal|numberSigned"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
     </com.google.android.material.textfield.TextInputLayout>
+
+    <Button
+        android:id="@+id/save_config_button"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
+        android:text="@string/save"
+        app:layout_constraintTop_toBottomOf="@id/rotation"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/launch_button"

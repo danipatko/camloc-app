@@ -1,11 +1,15 @@
 package com.dapa.camloc
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
+import android.util.Log
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -30,6 +34,9 @@ import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
+    private var mBound: Boolean = false
+    private lateinit var mService: MQTTService
+
     private var gatewayIp: InetAddress? = null
     private var localIp: InetAddress? = null
 
@@ -49,17 +56,53 @@ class MainActivity : AppCompatActivity() {
             getIpInfo()
         }
 
+        // start tracker
         binding.launchButton.setOnClickListener {
-            // start tracker
-            val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
-            this@MainActivity.startActivity(trackerIntent)
+            Intent(this@MainActivity, TrackerActivity::class.java).also {
+                this@MainActivity.startActivity(it)
+            }
             launched = true
+        }
+
+        binding.saveConfigButton.setOnClickListener {
+            if(mBound) {
+                val positionX = binding.positionX.editText?.text.toString().toFloat()
+                val positionY = binding.positionY.editText?.text.toString().toFloat()
+                val rotation = binding.rotation.editText?.text.toString().toFloat()
+                mService.mCameraConfig.set(positionX, positionY, rotation)
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Intent(this, MQTTService::class.java).also { intent ->
+            intent.action = "main"
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }
 
     override fun onResume() {
-        launched = false
         super.onResume()
+        launched = false
+    }
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as MQTTService.ServiceBinder
+            mService = binder.getService()
+            mBound = true
+
+            runOnUiThread {
+                binding.positionX.editText?.setText(mService.mCameraConfig.positionX.toString())
+                binding.positionY.editText?.setText(mService.mCameraConfig.positionY.toString())
+                binding.rotation.editText?.setText(mService.mCameraConfig.rotation.toString())
+            }
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound = false
+        }
     }
 
     private fun getIpInfo() {
@@ -105,7 +148,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        Log.d(TAG, "onStop called")
+
+        unbindService(connection)
+        mBound = false
         EventBus.getDefault().unregister(this)
+
         return super.onStop()
     }
 
@@ -122,6 +170,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        val TAG = "CamLocMainActivity"
+        const val TAG = "CamLocMainActivity"
     }
 }
