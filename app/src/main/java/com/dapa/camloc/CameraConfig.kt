@@ -12,16 +12,20 @@ import androidx.camera.core.CameraInfo
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import com.dapa.camloc.services.MQTTService
 import java.nio.ByteBuffer
 import kotlin.math.PI
 import kotlin.math.atan
 
 @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
-class CameraConfig(context: Context) {
-    data class CameraParams(val id: String, val lensFacing: Int, val fovX: Float, val fovY: Float)
-
+class CameraConfig(context: Context, onChangeListener: OnChangeListener) {
     private val context: Context
+
+    data class CameraParams(val id: String, val lensFacing: Int, val fovX: Float, val fovY: Float)
+    private var mChangeListener: OnChangeListener = onChangeListener
+
     private lateinit var cameraParams: Map<String, CameraParams>
+    private var mCameraId: String = "0"
 
     var positionX: Float = 0f
     var positionY: Float = 0f
@@ -29,8 +33,12 @@ class CameraConfig(context: Context) {
 
     val config: FloatArray
         get() {
-            return floatArrayOf(positionX, positionY, rotation, cameraParams["0"]?.fovX ?: 0f)
+            return floatArrayOf(positionX, positionY, rotation, cameraParams[mCameraId]?.fovX ?: -1f)
         }
+
+    interface OnChangeListener {
+        fun onConfigChange(config: FloatArray)
+    }
 
     init {
         this.context = context
@@ -46,6 +54,9 @@ class CameraConfig(context: Context) {
                     }
                 }
             }
+
+            // fire on load
+            mChangeListener.onConfigChange(config)
         }, ContextCompat.getMainExecutor(context))
 
         // load shared preferences
@@ -58,6 +69,15 @@ class CameraConfig(context: Context) {
         }
     }
 
+    fun setOnChangeListener(onChangeListener: OnChangeListener) {
+        mChangeListener = onChangeListener
+    }
+
+    fun changeCamera(cameraInfo: CameraInfo) {
+        mCameraId = Camera2CameraInfo.from(cameraInfo).cameraId
+        mChangeListener.onConfigChange(this.config)
+    }
+
     fun set(positionX: Float, positionY: Float, rotation: Float) {
         this.positionX = positionX
         this.positionY = positionY
@@ -66,23 +86,25 @@ class CameraConfig(context: Context) {
     }
 
     fun set(payload: ByteArray) {
+        Log.d(TAG, "config changed by remote")
         ByteBuffer.allocate(payload.size).put(payload).apply {
-            positionX = getFloat(0)
-            positionY = getFloat(4)
-            rotation = getFloat(8)
+            rewind()
+            positionX = float
+            positionY = float
+            rotation = float
             save()
         }
     }
 
     // save preferences
     fun save() {
+        mChangeListener.onConfigChange(config)
         context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE).apply{
             edit {
                 putFloat(SHARED_POSITION_X, positionX)
                 putFloat(SHARED_POSITION_Y, positionY)
                 putFloat(SHARED_ROTATION, rotation)
                 apply()
-                Toast.makeText(context, "Config saved", Toast.LENGTH_SHORT).show()
             }
         }
     }

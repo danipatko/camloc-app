@@ -9,4 +9,6 @@
     <string name="posx">X position (m)</string>
     <string name="posy">Y position (m)</string>
     <string name="rot">Camera rotation (deg)</string>
+    <string name="nowifi">No wifi connection</string>
+    <string name="broker_found">Broker found, connecting...</string>
 </resources>

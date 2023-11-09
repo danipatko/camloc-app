@@ -3,25 +3,43 @@ package com.dapa.camloc.services
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.dapa.camloc.events.BrokerInfo
+import com.dapa.camloc.events.IpInfo
 import org.greenrobot.eventbus.EventBus
+import java.net.Inet4Address
 import java.net.InetAddress
 
 class DiscoveryService : Service() {
     private var nsdManager: NsdManager? = null
-    private var mServiceName = ""
-    private var mService: NsdServiceInfo? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        getIpInfo()
         nsdManager = (this.getSystemService(Context.NSD_SERVICE) as NsdManager).apply {
             discoverServices(NSD_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         }
 
         return START_STICKY
+    }
+
+    private fun getIpInfo() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val manager: ConnectivityManager = super.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            val linkProps = manager.getLinkProperties(manager.activeNetwork)
+
+            if(linkProps != null) {
+                val gatewayIp = linkProps.dhcpServerAddress
+                val localIp = linkProps.linkAddresses.map { it.address }.first { it is Inet4Address } as Inet4Address
+                EventBus.getDefault().post(IpInfo(localIp, gatewayIp))
+            } else {
+                EventBus.getDefault().post(IpInfo(null, null))
+            }
+        }
     }
 
     private val discoveryListener = object : NsdManager.DiscoveryListener {
@@ -90,7 +108,7 @@ class DiscoveryService : Service() {
     }
 
     companion object {
-        const val TAG = "DiscoveryService"
+        const val TAG = "CamLocDiscoveryService"
         const val NSD_SERVICE_TYPE = "_services._dns-sd._udp"
         const val MDNS_SERVICE_NAME = "_camloc"
         const val MDNS_SERVICE_TYPE = "_mqtt._tcp"

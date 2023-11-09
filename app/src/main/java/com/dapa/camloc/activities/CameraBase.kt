@@ -126,7 +126,7 @@ abstract class CameraBase : AppCompatActivity() {
                 camera.cameraControl.setZoomRatio(mZoomRatio)
                 initialized = true
 
-                onCameraStarted()
+                onCameraStarted(camera.cameraInfo)
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
@@ -174,7 +174,7 @@ abstract class CameraBase : AppCompatActivity() {
     abstract fun onBind(): PreviewView
 
     // called after successful camera launch
-    open fun onCameraStarted() {}
+    open fun onCameraStarted(cameraInfo: CameraInfo) {}
 
     // called on camera selection change
     open fun onCameraIndexChanged(cameraIndex: Int) {}

@@ -7,7 +7,7 @@ import org.greenrobot.eventbus.EventBus
 import java.nio.ByteBuffer
 import kotlin.concurrent.thread
 
-class MQTTClientWrapper () {
+class MQTTClientWrapper {
     private var client: MqttClient? = null
 
     var connectionString: String? = null
@@ -15,7 +15,9 @@ class MQTTClientWrapper () {
             field = value
             // reconnect on connection string change
             client?.disconnect()
-            if(value != null) connect(value)
+            if(value != null) {
+                connect(value)
+            }
         }
 
     // same as 'state'
@@ -33,10 +35,17 @@ class MQTTClientWrapper () {
             field = value
         }
 
+    var config: FloatArray = floatArrayOf()
+        set(value) {
+            field = value
+            pub(TOPIC_PUB_CONFIG, value)
+        }
+
     interface OnMessageListener {
         fun onFlash()
         fun onFinish()
         fun onConnectionLost()
+        fun onUpdateConfig(payload: ByteArray)
     }
 
     private lateinit var mMessageListener: OnMessageListener
@@ -95,10 +104,12 @@ class MQTTClientWrapper () {
                 connect(options)
 
                 // subs here
-                subscribe(arrayOf(TOPIC_ASK_CONFIG, TOPIC_FLASH, TOPIC_DISCONNECT, TOPIC_ASK_STATE, TOPIC_SET_ALL_STATE, TOPIC_SET_STATE))
+                subscribe(arrayOf(TOPIC_ASK_CONFIG, TOPIC_FLASH, TOPIC_DISCONNECT, TOPIC_ASK_STATE, TOPIC_SET_ALL_STATE, TOPIC_SET_STATE, TOPIC_SET_CONFIG))
             }
 
-            pubConfig()
+            if(config.isNotEmpty()) {
+                pub(TOPIC_PUB_CONFIG, config)
+            }
 
             return true
         } catch (e: MqttException) {
@@ -112,8 +123,8 @@ class MQTTClientWrapper () {
             Log.d(TAG, "Got message $topic: $message")
             when(topic) {
                 // config
-                TOPIC_ASK_CONFIG -> pubConfig()
-                replaceWildcard(TOPIC_SET_CONFIG) -> if(message != null) setConfig(message.payload)
+                TOPIC_ASK_CONFIG -> pub(TOPIC_PUB_CONFIG, config)
+                replaceWildcard(TOPIC_SET_CONFIG) -> if(message != null) mMessageListener.onUpdateConfig(message.payload)
 
                 // state
                 TOPIC_ASK_STATE -> pub(TOPIC_PUB_STATE, isBound)
@@ -135,18 +146,6 @@ class MQTTClientWrapper () {
         } else {
             EventBus.getDefault().post(StartTrackerActivity())
         }
-    }
-
-    // TOPIC_PUB_CONFIG
-    private fun pubConfig() {
-        // TODO get config
-        // mCameraConfig.cameraParams[mCameraIndex].fovX
-        // x, y, rot, fov
-        pub(TOPIC_PUB_CONFIG, floatArrayOf(1f, 2f, 3f, 0f))
-    }
-
-    private fun setConfig(payload: ByteArray) {
-        // pub(TOPIC_PUB_CONFIG, floatArrayOf(1f, 2f, 3f, 0f))
     }
 
     fun destroy() {

@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
 import com.dapa.camloc.R
@@ -56,14 +57,10 @@ class TrackerActivity : CameraBase() {
         }
     }
 
-    override fun onCameraStarted() {
-        //if(cameraConfig != null)
-        //    setParams(cameraConfig!!.focalLengthX, cameraConfig!!.focalLengthY, cameraConfig!!.cX, cameraConfig!!.cY)
-    }
-
-    override fun onCameraIndexChanged(cameraIndex: Int) {
+    // applies on camera change as well
+    override fun onCameraStarted(cameraInfo: CameraInfo) {
         if(mBound) {
-            mService.mCameraIndex = cameraIndex
+            mService.mCameraConfig.changeCamera(cameraInfo)
         }
     }
 

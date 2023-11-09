@@ -1,15 +1,11 @@
 package com.dapa.camloc
 
-import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.net.ConnectivityManager
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.util.Log
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -18,16 +14,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
-import com.dapa.camloc.events.BrokerInfo
-import com.dapa.camloc.events.BrokerState
-import com.dapa.camloc.events.StartTrackerActivity
+import com.dapa.camloc.events.*
 import com.dapa.camloc.services.DiscoveryService
 import com.dapa.camloc.services.MQTTService
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
-import java.net.Inet4Address
-import java.net.InetAddress
 import kotlin.concurrent.thread
 
 
@@ -37,9 +29,6 @@ class MainActivity : AppCompatActivity() {
     private var mBound: Boolean = false
     private lateinit var mService: MQTTService
 
-    private var gatewayIp: InetAddress? = null
-    private var localIp: InetAddress? = null
-
     private var launched = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,13 +36,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        EventBus.getDefault().register(this)
 
         thread {
             startService(Intent(this, DiscoveryService::class.java))
             startService(Intent(this, MQTTService::class.java))
-
-            getIpInfo()
         }
 
         // start tracker
@@ -76,6 +62,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        EventBus.getDefault().register(this)
         Intent(this, MQTTService::class.java).also { intent ->
             intent.action = "main"
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
@@ -93,11 +80,7 @@ class MainActivity : AppCompatActivity() {
             mService = binder.getService()
             mBound = true
 
-            runOnUiThread {
-                binding.positionX.editText?.setText(mService.mCameraConfig.positionX.toString())
-                binding.positionY.editText?.setText(mService.mCameraConfig.positionY.toString())
-                binding.rotation.editText?.setText(mService.mCameraConfig.rotation.toString())
-            }
+            setConfigText()
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
@@ -105,23 +88,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getIpInfo() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val manager: ConnectivityManager = super.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-            val linkProps = manager.getLinkProperties(manager.activeNetwork)
-
-            if(linkProps != null) {
-                gatewayIp = linkProps.dhcpServerAddress
-                localIp = linkProps.linkAddresses.map { it.address }.first { it is Inet4Address }
-            }
-
-            if(gatewayIp == null)
-                binding.brokerStatus.text = "No wifi connection"
-        }
-
+    // updates ip stuff
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onIpInfo(info: IpInfo) {
         runOnUiThread {
-            binding.clientText.text = localIp?.hostAddress ?: "N/A"
-            binding.gatewayText.text = gatewayIp?.hostAddress ?: "N/A"
+            if(info.gateway == null) {
+                binding.brokerStatus.text = getString(R.string.nowifi)
+            }
+            binding.clientText.text = info.local?.hostAddress ?: getString(R.string.na)
+            binding.gatewayText.text = info.gateway?.hostAddress ?: getString(R.string.na)
         }
     }
 
@@ -133,28 +108,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetTextI18n")
     @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onConnect(info: BrokerInfo) {
+    fun onBrokerFound(info: BrokerInfo) {
         binding.brokerText.text = info.display
-        binding.brokerStatus.text = "Broker found, connecting..."
+        binding.brokerStatus.text = getString(R.string.broker_found)
     }
 
+    // on connection or connect failure
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onBrokerState(ev: BrokerState) {
-        val txt = if(ev.connected) "Connected" else "Lost broker connection"
+        val txt = if(ev.isConnected) "Connected" else "Lost broker connection"
         Toast.makeText(this, txt, Toast.LENGTH_SHORT).show()
         binding.brokerStatus.text = txt
     }
 
+    // set text if remote changed config
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onConfigChanged(ev: ConfigChanged) {
+         setConfigText()
+         Toast.makeText(this, "config changed by remote", Toast.LENGTH_SHORT).show()
+    }
+
+    fun setConfigText() {
+        if(mBound) {
+            runOnUiThread {
+                binding.positionX.editText?.setText(mService.mCameraConfig.positionX.toString())
+                binding.positionY.editText?.setText(mService.mCameraConfig.positionY.toString())
+                binding.rotation.editText?.setText(mService.mCameraConfig.rotation.toString())
+            }
+        }
+    }
+
     override fun onStop() {
-        Log.d(TAG, "onStop called")
+        super.onStop()
 
         unbindService(connection)
         mBound = false
         EventBus.getDefault().unregister(this)
-
-        return super.onStop()
     }
 
     // focus fix

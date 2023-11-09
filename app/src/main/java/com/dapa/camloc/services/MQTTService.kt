@@ -4,27 +4,28 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import com.dapa.camloc.CameraConfig
 import com.dapa.camloc.MQTTClientWrapper
 import com.dapa.camloc.events.BrokerInfo
 import com.dapa.camloc.events.BrokerState
+import com.dapa.camloc.events.ConfigChanged
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
 class MQTTService : Service() {
     lateinit var client: MQTTClientWrapper
-
     lateinit var mCameraConfig: CameraConfig
-    var mCameraIndex: Int = 0
-        set(value) {
-            field = value
-        }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         EventBus.getDefault().register(this)
-        mCameraConfig = CameraConfig(this)
+
+        mCameraConfig = CameraConfig(this, object : CameraConfig.OnChangeListener {
+            override fun onConfigChange(config: FloatArray) {
+                client.config = config
+                EventBus.getDefault().post(ConfigChanged())
+            }
+        })
 
         client = MQTTClientWrapper().apply {
             setMessageListener(object : MQTTClientWrapper.OnMessageListener {
@@ -39,6 +40,10 @@ class MQTTService : Service() {
                 override fun onFlash() {
                     mChangeListener.onFlash()
                 }
+
+                override fun onUpdateConfig(payload: ByteArray) {
+                    mCameraConfig.set(payload)
+                }
             })
         }
 
@@ -46,9 +51,7 @@ class MQTTService : Service() {
     }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
-    fun onConnect(info: BrokerInfo) {
-        Log.d(TAG, "onConnect was fired! ${info.connectionString}")
-
+    fun onBrokerFound(info: BrokerInfo) {
         val success = client.connect(info.connectionString)
         EventBus.getDefault().post(BrokerState(success))
     }
