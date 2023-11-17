@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -17,9 +18,16 @@ import java.net.InetAddress
 
 class DiscoveryService : Service() {
     private var nsdManager: NsdManager? = null
+    private var multicastLock: WifiManager.MulticastLock? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         getIpInfo()
+
+        val wifi = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        multicastLock = wifi.createMulticastLock("multicastLock")
+        multicastLock!!.setReferenceCounted(true)
+        multicastLock!!.acquire()
+
         nsdManager = (this.getSystemService(Context.NSD_SERVICE) as NsdManager).apply {
             discoverServices(NSD_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         }
@@ -99,6 +107,7 @@ class DiscoveryService : Service() {
     }
 
     override fun onDestroy() {
+        multicastLock?.release()
         nsdManager?.stopServiceDiscovery(discoveryListener)
         super.onDestroy()
     }

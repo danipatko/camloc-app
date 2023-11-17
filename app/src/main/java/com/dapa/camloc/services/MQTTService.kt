@@ -4,6 +4,8 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.util.Log
+import android.widget.Toast
 import com.dapa.camloc.CameraConfig
 import com.dapa.camloc.MQTTClientWrapper
 import com.dapa.camloc.events.BrokerInfo
@@ -14,7 +16,7 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
 class MQTTService : Service() {
-    lateinit var client: MQTTClientWrapper
+    var client: MQTTClientWrapper? = null
     lateinit var mCameraConfig: CameraConfig
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -22,7 +24,7 @@ class MQTTService : Service() {
 
         mCameraConfig = CameraConfig(this, object : CameraConfig.OnChangeListener {
             override fun onConfigChange(config: FloatArray) {
-                client.config = config
+                client?.config = config
                 EventBus.getDefault().post(ConfigChanged())
             }
         })
@@ -42,6 +44,12 @@ class MQTTService : Service() {
                 }
 
                 override fun onUpdateConfig(payload: ByteArray) {
+                    try {
+                        Toast.makeText(this@MQTTService, "config changed by remote", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to make text")
+                    }
+
                     mCameraConfig.set(payload)
                 }
             })
@@ -52,13 +60,15 @@ class MQTTService : Service() {
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
     fun onBrokerFound(info: BrokerInfo) {
-        val success = client.connect(info.connectionString)
-        EventBus.getDefault().post(BrokerState(success))
+        if(client != null) {
+            val success = client!!.connect(info.connectionString)
+            EventBus.getDefault().post(BrokerState(success))
+        }
     }
 
     override fun onDestroy() {
         EventBus.getDefault().unregister(this)
-        client.destroy()
+        client?.destroy()
         super.onDestroy()
     }
 

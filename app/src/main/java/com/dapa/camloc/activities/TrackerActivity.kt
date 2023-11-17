@@ -48,7 +48,7 @@ class TrackerActivity : CameraBase() {
             binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
 
             if(mBound) {
-                mService.client.lastX = x
+                mService.client?.lastX = x
             }
 
             // why is pose estimation unreliable?
@@ -133,7 +133,7 @@ class TrackerActivity : CameraBase() {
             mService = binder.getService()
 
             mBound = true
-            mService.client.isBound = true
+            mService.client?.isBound = true
 
             mService.setOnChangeListener(object : MQTTService.OnChangeListener {
                 override fun onFinish() {
@@ -164,8 +164,10 @@ class TrackerActivity : CameraBase() {
 
     override fun onStop() {
         super.onStop()
-        mService.client.isBound = false
-        mBound = false
+        if(mBound) {
+            mService.client?.isBound = false
+            mBound = false
+        }
         unbindService(connection)
     }
 

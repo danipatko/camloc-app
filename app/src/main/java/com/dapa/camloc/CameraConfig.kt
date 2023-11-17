@@ -92,6 +92,7 @@ class CameraConfig(context: Context, onChangeListener: OnChangeListener) {
             positionX = float
             positionY = float
             rotation = float
+            Log.d(TAG, "positionX = $positionX, positionY = $positionY, rotation = $rotation")
             save()
         }
     }

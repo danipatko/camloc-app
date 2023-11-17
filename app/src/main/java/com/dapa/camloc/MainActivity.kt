@@ -126,7 +126,6 @@ class MainActivity : AppCompatActivity() {
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onConfigChanged(ev: ConfigChanged) {
          setConfigText()
-         Toast.makeText(this, "config changed by remote", Toast.LENGTH_SHORT).show()
     }
 
     fun setConfigText() {
