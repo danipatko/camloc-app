@@ -1,36 +1,31 @@
 package com.dapa.camloc
 
-import android.content.ComponentName
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
+import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
+import android.provider.Settings
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
-import com.dapa.camloc.events.*
 import com.dapa.camloc.services.DiscoveryService
-import com.dapa.camloc.services.MQTTService
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
+import com.dapa.camloc.util.getNetworkInfo
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.concurrent.thread
-
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
     private var mBound: Boolean = false
-    private lateinit var mService: MQTTService
-
     private var launched = false
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -39,8 +34,9 @@ class MainActivity : AppCompatActivity() {
 
         thread {
             startService(Intent(this, DiscoveryService::class.java))
-            startService(Intent(this, MQTTService::class.java))
         }
+
+        binding.deviceName.editText?.setText(Build.MODEL)
 
         // start tracker
         binding.launchButton.setOnClickListener {
@@ -55,96 +51,35 @@ class MainActivity : AppCompatActivity() {
                 val positionX = binding.positionX.editText?.text.toString().toFloat()
                 val positionY = binding.positionY.editText?.text.toString().toFloat()
                 val rotation = binding.rotation.editText?.text.toString().toFloat()
-                mService.mCameraConfig.set(positionX, positionY, rotation)
             }
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        EventBus.getDefault().register(this)
-        Intent(this, MQTTService::class.java).also { intent ->
-            intent.action = "main"
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun checkNetwork() {
+        val info = getNetworkInfo(this)
+        if(info == null) {
+            MaterialAlertDialogBuilder(this).apply {
+                setTitle("Not connected")
+                setMessage("Turn on wifi and connect to a network!")
+                setPositiveButton("Kay") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS));
+                }
+                setNegativeButton("Nah") { _, _ ->
+                    finish()
+                    exitProcess(0)
+                }
+            }.create().show()
+        } else {
+            binding.clientText.text = info.address.hostAddress
+            binding.gatewayText.text = info.gateway.hostAddress
         }
     }
 
     override fun onResume() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) checkNetwork()
         super.onResume()
         launched = false
-    }
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as MQTTService.ServiceBinder
-            mService = binder.getService()
-            mBound = true
-
-            setConfigText()
-        }
-
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            mBound = false
-        }
-    }
-
-    // updates ip stuff
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onIpInfo(info: IpInfo) {
-        runOnUiThread {
-            if(info.gateway == null) {
-                binding.brokerStatus.text = getString(R.string.nowifi)
-            }
-            binding.clientText.text = info.local?.hostAddress ?: getString(R.string.na)
-            binding.gatewayText.text = info.gateway?.hostAddress ?: getString(R.string.na)
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onStartTrackerActivity(nothing: StartTrackerActivity) {
-        if(!launched) {
-            val trackerIntent = Intent(this@MainActivity, TrackerActivity::class.java)
-            this@MainActivity.startActivity(trackerIntent)
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onBrokerFound(info: BrokerInfo) {
-        binding.brokerText.text = info.display
-        binding.brokerStatus.text = getString(R.string.broker_found)
-    }
-
-    // on connection or connect failure
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onBrokerState(ev: BrokerState) {
-        val txt = if(ev.isConnected) "Connected" else "Lost broker connection"
-        Toast.makeText(this, txt, Toast.LENGTH_SHORT).show()
-        binding.brokerStatus.text = txt
-    }
-
-    // set text if remote changed config
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onConfigChanged(ev: ConfigChanged) {
-         setConfigText()
-         Toast.makeText(this, "config changed by remote", Toast.LENGTH_SHORT).show()
-    }
-
-    fun setConfigText() {
-        if(mBound) {
-            runOnUiThread {
-                binding.positionX.editText?.setText(mService.mCameraConfig.positionX.toString())
-                binding.positionY.editText?.setText(mService.mCameraConfig.positionY.toString())
-                binding.rotation.editText?.setText(mService.mCameraConfig.rotation.toString())
-            }
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        unbindService(connection)
-        mBound = false
-        EventBus.getDefault().unregister(this)
     }
 
     // focus fix
@@ -160,6 +95,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val TAG = "CamLocMainActivity"
+        const val TAG = "CamlocMainActivity"
     }
 }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
@@ -12,7 +11,6 @@ import androidx.camera.core.CameraInfo
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import com.dapa.camloc.services.MQTTService
 import java.nio.ByteBuffer
 import kotlin.math.PI
 import kotlin.math.atan
@@ -130,7 +128,7 @@ class CameraConfig(context: Context, onChangeListener: OnChangeListener) {
     }
 
     companion object {
-        const val TAG = "CamLocCameraConfig"
+        const val TAG = "CamlocCameraConfig"
         const val SHARED_PREFS_NAME = "CamlocCameraConfig"
         const val SHARED_POSITION_X = "posx"
         const val SHARED_POSITION_Y = "posy"

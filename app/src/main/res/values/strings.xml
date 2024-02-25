@@ -11,4 +11,5 @@
     <string name="rot">Camera rotation (deg)</string>
     <string name="nowifi">No wifi connection</string>
     <string name="broker_found">Broker found, connecting...</string>
+    <string name="devname">Device name</string>
 </resources>

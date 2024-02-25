@@ -1,13 +1,7 @@
 package com.dapa.camloc.activities
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
-import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -18,7 +12,6 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
-import com.dapa.camloc.services.MQTTService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.concurrent.thread
 
@@ -34,7 +27,6 @@ class TrackerActivity : CameraBase() {
 
     // service
     private var mBound: Boolean = false
-    private lateinit var mService: MQTTService
 
     // native function declarations
     private external fun trackMarker(matAddress: Long): Float
@@ -47,10 +39,6 @@ class TrackerActivity : CameraBase() {
             val x = trackMarker(mat.nativeObjAddr)
             binding.cameraLayout.overlay.drawX(x, mCameraIndex == 2)
 
-            if(mBound) {
-                mService.client.lastX = x
-            }
-
             // why is pose estimation unreliable?
             // https://github.com/opencv/opencv/issues/8813
             image.close()
@@ -59,9 +47,7 @@ class TrackerActivity : CameraBase() {
 
     // applies on camera change as well
     override fun onCameraStarted(cameraInfo: CameraInfo) {
-        if(mBound) {
-            mService.mCameraConfig.changeCamera(cameraInfo)
-        }
+
     }
 
     // ---
@@ -127,46 +113,13 @@ class TrackerActivity : CameraBase() {
 
     // ---
 
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as MQTTService.ServiceBinder
-            mService = binder.getService()
-
-            mBound = true
-            mService.client.isBound = true
-
-            mService.setOnChangeListener(object : MQTTService.OnChangeListener {
-                override fun onFinish() {
-                    finish()
-                }
-
-                override fun onFlash() {
-                    thread {
-                        flash(true)
-                        Thread.sleep(500)
-                        flash(false)
-                    }
-                }
-            })
-        }
-
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            mBound = false
-        }
-    }
-
     override fun onStart() {
         super.onStart()
-        Intent(this, MQTTService::class.java).also { intent ->
-            bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
     }
 
     override fun onStop() {
         super.onStop()
-        mService.client.isBound = false
         mBound = false
-        unbindService(connection)
     }
 
     // ---
