@@ -82,28 +82,22 @@ abstract class CameraBase : AppCompatActivity() {
         cameraProviderFuture.addListener({
             val previewView = onBind()
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+            val resolutionSelector = ResolutionSelector.Builder()
+                .setAspectRatioStrategy(aspectRatio)
+                .setResolutionStrategy(ResolutionStrategy(mResolution, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER))
+                .build()
 
             // prep use cases
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .setResolutionSelector(
-                    ResolutionSelector.Builder()
-                        .setAspectRatioStrategy(aspectRatio)
-                        .setResolutionStrategy(ResolutionStrategy(mResolution, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER))
-                        .build()
-                )
+                .setResolutionSelector(resolutionSelector)
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor, ImageAnalyzer())
                 }
 
             val preview = Preview.Builder()
-                .setResolutionSelector(
-                    ResolutionSelector.Builder()
-                        .setAspectRatioStrategy(aspectRatio)
-                        .setResolutionStrategy(ResolutionStrategy(mResolution, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER))
-                        .build()
-                )
+                .setResolutionSelector(resolutionSelector)
                 .build()
                 .also {
                     it.setSurfaceProvider(previewView.surfaceProvider)

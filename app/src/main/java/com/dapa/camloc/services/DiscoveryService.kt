@@ -1,6 +1,7 @@
 package com.dapa.camloc.services
 
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -9,7 +10,15 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.os.IBinder
 import android.util.Log
+import com.dapa.camloc.BuildConfig
 import java.net.Inet4Address
+
+public class DiscoveryBroadcastReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+
+    }
+}
+
 
 class DiscoveryService : Service() {
     private var multicastLock: WifiManager.MulticastLock? = null
@@ -45,7 +54,14 @@ class DiscoveryService : Service() {
         }
 
         override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-            Log.d(TAG, "connecting to broker on $serviceInfo")
+            Log.d(TAG, "Connecting to broker on $serviceInfo")
+            Intent().also { intent ->
+                intent.action = INTENT_ACTION
+                intent.putExtra("name", serviceInfo.serviceName)
+                intent.putExtra("ip", serviceInfo.host.toString())
+                intent.putExtra("port", serviceInfo.port)
+                sendBroadcast(intent)
+            }
         }
     }
 
@@ -77,5 +93,6 @@ class DiscoveryService : Service() {
         const val TAG = "CamlocDiscoveryService"
         // DNS SRV record to search for
         const val REG_TYPE = "_camloc._tcp"
+        const val INTENT_ACTION = "${BuildConfig.APPLICATION_ID}.BROKER_FOUND"
     }
 }
