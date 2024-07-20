@@ -113,9 +113,6 @@ class TrackerActivity : CameraBase() {
 
     // ---
 
-    override fun onStart() {
-        super.onStart()
-    }
 
     override fun onStop() {
         super.onStop()

@@ -1,11 +1,9 @@
 package com.dapa.camloc
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
@@ -18,12 +16,13 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.dapa.camloc.activities.TrackerActivity
 import com.dapa.camloc.databinding.ActivityMainBinding
 import com.dapa.camloc.services.DiscoveryService
 import com.dapa.camloc.services.NetworkService
+import com.dapa.camloc.util.ClientConfig
+import com.dapa.camloc.util.HardwareInfo
 import com.dapa.camloc.util.getNetworkInfo
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.concurrent.thread
@@ -42,12 +41,18 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            checkNetwork()
+        }
+
         thread {
-            ContextCompat.registerReceiver(this, discoveryBroadcastReceiver, IntentFilter(DiscoveryService.INTENT_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED)
+            // ContextCompat.registerReceiver(this, discoveryBroadcastReceiver, IntentFilter(DiscoveryService.INTENT_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED)
 
             startService(Intent(this, NetworkService::class.java))
             startService(Intent(this, DiscoveryService::class.java))
         }
+
+        // val hw = HardwareInfo(this)
 
         binding.deviceName.editText?.setText(Build.MODEL)
 
@@ -91,6 +96,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         Intent(this, NetworkService::class.java).also { intent ->
+            intent.putExtra("type", TAG)
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }
@@ -118,18 +124,44 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    private val discoveryBroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val name = intent.getStringExtra("name")!!
-            val ip = intent.getStringExtra("ip")!!.drop(1)
-            val port = intent.getIntExtra("port", -1)
+    private val serviceHandler = object : NetworkService.MainEventHandler {
+        override fun onConfigSet(config: ClientConfig) {
+            runOnUiThread {
+                Toast.makeText(this@MainActivity, "Config set by remote", Toast.LENGTH_SHORT).show()
 
-            // Log.d(TAG, "got: $name | $ip:$port")
+                binding.positionX.editText?.setText(config.xPosition.toString())
+                binding.positionY.editText?.setText(config.yPosition.toString())
+                binding.rotation.editText?.setText(config.rotation.toString())
+            }
 
-            binding.brokerText.text = ip
-            binding.brokerStatus.text = "Found broker '$name' (port $port)"
+            Log.d(TAG, config.state.toString())
+            if(config.state == 1.toByte()) {
+                Intent(this@MainActivity, TrackerActivity::class.java).also {
+                    this@MainActivity.startActivity(it)
+                }
+            }
+        }
 
-            Toast.makeText(context, "got intent", Toast.LENGTH_SHORT).show()
+        override fun onBrokerFound(name: String, ip: String, port: Int) {
+            runOnUiThread {
+                binding.brokerText.text = ip
+                binding.brokerStatus.text = "Found broker $name on port $port"
+            }
+        }
+
+        override fun onConnected(name: String, ip: String, port: Int) {
+            runOnUiThread {
+                binding.brokerText.text = ip
+                binding.brokerStatus.text = "Connected to $name on port $port"
+            }
+        }
+
+        override fun onDisconnected() {
+            runOnUiThread {
+                binding.brokerText.text = "N/A"
+                binding.brokerStatus.text = "Waiting for broker connection"
+                Toast.makeText(this@MainActivity, "Lost connection", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -139,6 +171,7 @@ class MainActivity : AppCompatActivity() {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             val binder = service as NetworkService.LocalBinder
             mNetworkService = binder.getService()
+            mNetworkService.mainHandler = serviceHandler
             mBound = true
         }
 
