@@ -46,13 +46,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         thread {
-            // ContextCompat.registerReceiver(this, discoveryBroadcastReceiver, IntentFilter(DiscoveryService.INTENT_ACTION), ContextCompat.RECEIVER_NOT_EXPORTED)
-
             startService(Intent(this, NetworkService::class.java))
             startService(Intent(this, DiscoveryService::class.java))
         }
-
-        // val hw = HardwareInfo(this)
 
         binding.deviceName.editText?.setText(Build.MODEL)
 
@@ -68,6 +64,7 @@ class MainActivity : AppCompatActivity() {
                 val positionX = binding.positionX.editText?.text.toString().toFloat()
                 val positionY = binding.positionY.editText?.text.toString().toFloat()
                 val rotation = binding.rotation.editText?.text.toString().toFloat()
+                mNetworkService.config.setConfig(positionX, positionY, rotation)
             }
         }
     }
@@ -133,9 +130,10 @@ class MainActivity : AppCompatActivity() {
                 binding.positionY.editText?.setText(config.yPosition.toString())
                 binding.rotation.editText?.setText(config.rotation.toString())
             }
+        }
 
-            Log.d(TAG, config.state.toString())
-            if(config.state == 1.toByte()) {
+        override fun onStateSet(state: Byte) {
+            if(state == 1.toByte() && !TrackerActivity.isActive) {
                 Intent(this@MainActivity, TrackerActivity::class.java).also {
                     this@MainActivity.startActivity(it)
                 }

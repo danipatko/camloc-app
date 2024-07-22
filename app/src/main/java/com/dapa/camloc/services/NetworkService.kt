@@ -17,29 +17,26 @@ import java.nio.ByteBuffer
 class NetworkService : Service() {
     // updates on tracker
     interface TrackerEventHandler {
-        fun onConfigSet(config: ClientConfig)
+        fun onConfigSet(config: ClientConfig) // relevant fields: cameraIndex, resolution, focus
+        fun onStateSet(state: Byte)
         fun onFlash()
     }
 
     // UI updates on main
     interface MainEventHandler {
-        fun onConfigSet(config: ClientConfig)
+        fun onConfigSet(config: ClientConfig) // relevant fields: x pos, y pos, rotation
+        fun onStateSet(state: Byte)
         fun onBrokerFound(name: String, ip: String, port: Int)
         fun onConnected(name: String, ip: String, port: Int)
         fun onDisconnected()
     }
 
-    fun setConfig(positionX: Float, positionY: Float, rotation: Float) {
-        //
-    }
-
+    // called by TrackerActivity
     fun setX(x: Float) {
         //
     }
 
-    private fun setConfig(config: ClientConfig) {
-        Log.d(TAG, "config: $config")
-        mainHandler?.onConfigSet(config)
+    fun onStateChanged(state: Byte) {
     }
 
     private fun onConfigAsked(): ClientConfig {
@@ -61,12 +58,13 @@ class NetworkService : Service() {
         return START_STICKY
     }
 
+    private lateinit var out: OutputStream
+
     // Handler that receives messages from the thread
     private inner class ServiceHandler(looper: Looper) : Handler(looper) {
         private lateinit var udpSocket: DatagramSocket
         private lateinit var dpPacket: DatagramPacket
         private lateinit var tcpSocket: Socket
-        private lateinit var out: OutputStream
 
         private var udpBuffer = ByteArray(Double.SIZE_BYTES)
         private var tcpBuffer = ByteArray(1024)
@@ -97,11 +95,23 @@ class NetworkService : Service() {
                 Log.d(TAG, "$buf")
 
                 when(comm) {
-                    SET_CONFIG -> setConfig(ClientConfig.fromBytes(buf))
-                    ASK_CONFIG -> out.write(onConfigAsked().toBytes())
-//                    SET_STATE -> handler.onSetState(ClientState.fromBytes(buf))
-//                   ASK_STATE -> out.write(handler.onStateAsked().toBytes())
-//                    FLASH -> handler.onFlash()
+                    SET_CONFIG -> {
+                        config.setConfig(buf)
+                        mainHandler?.onConfigSet(config)
+                        out.write(byteArrayOf(SET_CONFIG, *config.toBytes())) // update
+                    }
+                    ASK_CONFIG -> out.write(config.toBytes())
+                    SET_STATE -> {
+                        val state = buf.get()
+                        config.state = state
+                        mainHandler?.onStateSet(state)
+                        trackerHandler?.onStateSet(state)
+                    }
+                    SET_CAMERA -> {
+                        config.setCamera(buf)
+                    }
+                    SET_FLASH -> trackerHandler?.onFlash()
+
                     else -> Log.w(TAG, "unrecognised command")
                 }
 
@@ -113,9 +123,9 @@ class NetworkService : Service() {
             val name = msg.data.getString("name")!!
             val ip = msg.data.getString("ip")!!.drop(1)
             val port = msg.data.getInt("port")
-            mainHandler?.onBrokerFound(name, ip, port)
-
             Log.d(TAG, "got: $name | $ip:$port")
+
+            mainHandler?.onBrokerFound(name, ip, port)
 
             try {
                 tcpLoop(ip, port, name)
@@ -162,14 +172,11 @@ class NetworkService : Service() {
     companion object {
         const val TAG = "CamlocNetworkService"
 
-        // request types
-        const val SEND_CONFIG: Byte = 0x0
-        const val SEND_STATE: Byte = 0x1
+        const val ASK_CONFIG: Byte = 0x0
+        const val SET_CONFIG: Byte = 0x1
+        const val SET_STATE: Byte = 0x2
+        const val SET_CAMERA: Byte = 0x3
+        const val SET_FLASH: Byte = 0x4
 
-        const val SET_CONFIG: Byte = 0x0
-        const val ASK_CONFIG: Byte = 0x3
-        const val SET_STATE: Byte = 0x4
-        const val ASK_STATE: Byte = 0x5
-        const val FLASH: Byte = 0x6
     }
 }
