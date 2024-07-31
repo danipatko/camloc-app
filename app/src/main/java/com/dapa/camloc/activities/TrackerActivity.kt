@@ -19,7 +19,7 @@ import com.dapa.camloc.MainActivity
 import com.dapa.camloc.R
 import com.dapa.camloc.databinding.ActivityTrackerBinding
 import com.dapa.camloc.services.NetworkService
-import com.dapa.camloc.util.ClientConfig
+import com.dapa.camloc.util.HardwareInfo
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.concurrent.thread
 
@@ -27,6 +27,7 @@ import kotlin.concurrent.thread
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding
     private lateinit var mScaleDetector : ScaleGestureDetector
+    private val hardwareInfo = HardwareInfo(this)
 
     private var currentResolution = 2
 
@@ -51,9 +52,15 @@ class TrackerActivity : CameraBase() {
         }
     }
 
-    // applies on camera change as well
-    override fun onCameraStarted(cameraInfo: CameraInfo) {
+    private var currentFOV = -1F
 
+    override fun onCameraChanged(cameraInfo: CameraInfo) {
+        currentFOV = HardwareInfo.getFOV(this, cameraInfo)
+        mNetworkService.cameraSet(currentFOV, mCameraIndex, currentResolution, mZoomRatio)
+    }
+
+    override fun onZoomChanged(zoom: Float) {
+        mNetworkService.cameraSet(currentFOV, mCameraIndex, currentResolution, mZoomRatio)
     }
 
     // ---
@@ -106,7 +113,7 @@ class TrackerActivity : CameraBase() {
     private val scaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             // clamp between 1x and 5x zoom
-            mZoomRatio = 1f.coerceAtLeast((mZoomRatio * detector.scaleFactor).coerceAtMost(5.0f))
+            mZoomRatio = (mZoomRatio * detector.scaleFactor).coerceIn(0.1F, 5F)
             binding.cameraLayout.currentZoomRatio.text = String.format("%.1fX", mZoomRatio)
             return true
         }
@@ -128,17 +135,16 @@ class TrackerActivity : CameraBase() {
 
     override fun onStop() {
         super.onStop()
+        mNetworkService.trackingClosed()
+        isActive = false
         unbindService(connection)
         mBound = false
-        isActive = false
     }
 
     // ---
 
     val serviceHandler = object : NetworkService.TrackerEventHandler {
-        override fun onConfigSet(config: ClientConfig) {
-            val cameraIndex = config.cameraIndex.toInt()
-            val resolution = config.resolution.toInt()
+        override fun onCameraSet(cameraIndex: Int, resolution: Int, focus: Float) {
 
             if(this@TrackerActivity.mCameraIndex != cameraIndex)
                 this@TrackerActivity.mCameraIndex = cameraIndex
@@ -146,8 +152,8 @@ class TrackerActivity : CameraBase() {
             if(this@TrackerActivity.currentResolution != resolution)
                 this@TrackerActivity.currentResolution = resolution
 
-            if(this@TrackerActivity.mZoomRatio != config.focus)
-                this@TrackerActivity.mZoomRatio = config.focus
+            if(this@TrackerActivity.mZoomRatio != focus)
+                this@TrackerActivity.mZoomRatio = focus
         }
 
         override fun onStateSet(state: Byte) {

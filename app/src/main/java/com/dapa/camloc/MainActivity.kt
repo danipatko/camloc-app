@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
                 val positionX = binding.positionX.editText?.text.toString().toFloat()
                 val positionY = binding.positionY.editText?.text.toString().toFloat()
                 val rotation = binding.rotation.editText?.text.toString().toFloat()
-                mNetworkService.config.setConfig(positionX, positionY, rotation)
+                mNetworkService.setConfig(positionX, positionY, rotation)
             }
         }
     }

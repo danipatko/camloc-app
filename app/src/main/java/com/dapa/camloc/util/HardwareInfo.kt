@@ -20,7 +20,6 @@ class CameraParams(val id: String, val lensFacing: Int, val fovX: Float, val fov
 
 @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
 class HardwareInfo(val context: Context) {
-
     private lateinit var cameraParams: Map<String, CameraParams>
     private var mCameraId: String = "0"
     private val currentCamera: CameraParams get() = cameraParams[mCameraId]!!
@@ -44,7 +43,7 @@ class HardwareInfo(val context: Context) {
 
             cameraParams = buildMap {
                 provider.availableCameraInfos.forEach {
-                    getCameraParams(it, context).apply {
+                    getCameraParams(context, it).apply {
                         this@buildMap[this.id] = this
                     }
                 }
@@ -58,7 +57,6 @@ class HardwareInfo(val context: Context) {
         // mChangeListener.onConfigChange(this.config)
     }
 
-
     val batteryPercentage: Int get() {
         val bm = context.getSystemService(BATTERY_SERVICE) as BatteryManager
         return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
@@ -67,7 +65,7 @@ class HardwareInfo(val context: Context) {
     companion object {
         const val TAG = "CamlocCameraConfig"
 
-        fun getCameraParams(cameraInfo: CameraInfo, context: Context): CameraParams {
+        fun getCameraParams(context: Context, cameraInfo: CameraInfo): CameraParams {
             val cameraId = Camera2CameraInfo.from(cameraInfo).cameraId
 
             val cameraManager = context.getSystemService(AppCompatActivity.CAMERA_SERVICE) as CameraManager
@@ -85,6 +83,19 @@ class HardwareInfo(val context: Context) {
             Log.d(TAG, "$cameraId ${cameraInfo.lensFacing} | $fovX $fovY")
 
             return CameraParams(cameraId, cameraInfo.lensFacing, fovX, fovY)
+        }
+
+        fun getFOV(context: Context, cameraInfo: CameraInfo): Float {
+            val cameraManager = context.getSystemService(AppCompatActivity.CAMERA_SERVICE) as CameraManager
+            val characteristics = cameraManager.getCameraCharacteristics(Camera2CameraInfo.from(cameraInfo).cameraId)
+
+            // these should be available on all devices with a camera
+            // throws exception if not
+            val focalLengthMM = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)!![0]
+            val sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)!!
+
+            // calculate field of view in deg
+            return (2 * atan(sensorSize.width / (2 * focalLengthMM))) * (180 / PI).toFloat()
         }
     }
 }

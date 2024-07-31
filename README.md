@@ -25,47 +25,24 @@ Network protocol rework
 
 ---
 
-enum state: 0=off, 1=connected/idle
+SERVER -> CLIENT
 
-TCP commands
+ASK CONFIG (all)
 
-**client**
+SET CONFIG (x, y, rot)
 
--   SEND config (sent on connect and manual update) **`0x0`**
+SET STATE (tracking on/off)
 
-    -   payload: `[msg: u8, state: u8, xpos: f32, ypos: f32, rotation: f32, fov: f32]`
+SET FLASH
 
--   SEND state (sent on change) **`0x2`**
-
-    -   payload: `[msg: u8, state: u8, battery: u8, camera index: u8, xres: u16, yres: u16, focus: f32]`
-    -   if the state is off (0), there are no other fields after the battery
-
-**server**
-
--   SET config (sets config and state remotely) **`0x2`**
-
-    -   payload: `[msg: u8, state: u8, camera index: u8, xpos: f32, ypos: f32, rotation: f32, fov: f32]`
-
--   ASK config (triggers a config send) **`0x3`**
-
-    -   payload: `[msg: u8]`
-
--   SET state (sets state remotely) **`0x4`**
-
-    -   payload: `[msg: u8, state: u8, camera index: u8, xres: u16, yres: u16, focus multiplier: f32]`
-
--   ASK state (triggers a state send) **`0x4`**
-
-    -   payload: `[msg: u8]`
-
--   flash (sent manually, flashes phone for a few seconds) **`0x5`**
-    -   payload: `[msg: u8]`
+SET CAMERA (camera: 0|1|2, resolution: 0|1|2|3|4, focus)
 
 ---
 
-UDP
+CLIENT -> SERVER
 
-**client**
+SET CONFIG (ALL)
 
--   SEND X position
-    -   payload `[f64]`
+SET CONFIG (x, y, rot)
+
+SET STATE AND CAMERA (tracking, camera: 0|1|2, fov, resolution: 0|1|2|3|4, focus, battery)

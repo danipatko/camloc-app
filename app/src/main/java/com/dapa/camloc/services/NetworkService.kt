@@ -17,31 +17,42 @@ import java.nio.ByteBuffer
 class NetworkService : Service() {
     // updates on tracker
     interface TrackerEventHandler {
-        fun onConfigSet(config: ClientConfig) // relevant fields: cameraIndex, resolution, focus
+        fun onCameraSet(cameraIndex: Int, resolution: Int, focus: Float) // relevant fields: cameraIndex, resolution, focus
         fun onStateSet(state: Byte)
         fun onFlash()
+    }
+
+    // triggered by manual change
+    fun cameraSet(fov: Float, cameraIndex: Int, resolution: Int, zoom: Float) {
+        config.state = 1
+        config.fov = fov
+        config.setCamera(cameraIndex.toByte(), resolution.toByte(), zoom)
+        serviceHandler.write(SET_CONFIG, config.toBytes())
+    }
+
+    fun setX(x: Float) {} // TODO:
+
+    fun trackingClosed() {
+        config.state = 0
+        serviceHandler.write(SET_CONFIG, config.toBytes())
     }
 
     // UI updates on main
     interface MainEventHandler {
         fun onConfigSet(config: ClientConfig) // relevant fields: x pos, y pos, rotation
         fun onStateSet(state: Byte)
+        // discovery stuff
         fun onBrokerFound(name: String, ip: String, port: Int)
         fun onConnected(name: String, ip: String, port: Int)
         fun onDisconnected()
     }
 
-    // called by TrackerActivity
-    fun setX(x: Float) {
-        //
+    fun setConfig(x: Float, y: Float, rotation: Float) {
+        config.setConfig(x, y, rotation)
+        serviceHandler.write(SET_CONFIG, config.toBytes())
     }
 
-    fun onStateChanged(state: Byte) {
-    }
-
-    private fun onConfigAsked(): ClientConfig {
-        return ClientConfig.DEFAULT
-    }
+    // ---
 
     private var startId: Int = -1
     private lateinit var serviceLooper: Looper
@@ -58,13 +69,12 @@ class NetworkService : Service() {
         return START_STICKY
     }
 
-    private lateinit var out: OutputStream
-
     // Handler that receives messages from the thread
     private inner class ServiceHandler(looper: Looper) : Handler(looper) {
         private lateinit var udpSocket: DatagramSocket
         private lateinit var dpPacket: DatagramPacket
         private lateinit var tcpSocket: Socket
+        private lateinit var out: OutputStream
 
         private var udpBuffer = ByteArray(Double.SIZE_BYTES)
         private var tcpBuffer = ByteArray(1024)
@@ -98,17 +108,17 @@ class NetworkService : Service() {
                     SET_CONFIG -> {
                         config.setConfig(buf)
                         mainHandler?.onConfigSet(config)
-                        out.write(byteArrayOf(SET_CONFIG, *config.toBytes())) // update
+                        write(SET_CONFIG, config.toBytes())
                     }
-                    ASK_CONFIG -> out.write(config.toBytes())
+                    ASK_CONFIG -> write(ASK_CONFIG, config.toBytes())
                     SET_STATE -> {
-                        val state = buf.get()
-                        config.state = state
-                        mainHandler?.onStateSet(state)
-                        trackerHandler?.onStateSet(state)
+                        config.state = buf.get()
+                        mainHandler?.onStateSet(config.state)
+                        trackerHandler?.onStateSet(config.state)
                     }
                     SET_CAMERA -> {
                         config.setCamera(buf)
+                        trackerHandler?.onCameraSet(config.cameraIndex.toInt(), config.resolution.toInt(), config.focus)
                     }
                     SET_FLASH -> trackerHandler?.onFlash()
 
@@ -119,6 +129,7 @@ class NetworkService : Service() {
             }
         }
 
+        // STARTING BACKGROUND SERVICE
         override fun handleMessage(msg: Message) {
             val name = msg.data.getString("name")!!
             val ip = msg.data.getString("ip")!!.drop(1)
@@ -135,6 +146,10 @@ class NetworkService : Service() {
             }
 
             stopSelf(msg.arg1)
+        }
+
+        fun write(message: Byte, buf: ByteArray) {
+            out.write(byteArrayOf(message) + buf)
         }
     }
 

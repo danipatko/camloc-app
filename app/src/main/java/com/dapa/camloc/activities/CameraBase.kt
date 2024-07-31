@@ -20,7 +20,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.dapa.camloc.CameraConfig
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -54,7 +53,6 @@ abstract class CameraBase : AppCompatActivity() {
             field = value
             // if camera is running, restart
             if(initialized) startCamera()
-            onCameraIndexChanged(value)
         }
 
     var mResolution: Size = Size(1280, 720)
@@ -73,7 +71,10 @@ abstract class CameraBase : AppCompatActivity() {
     var mZoomRatio: Float = 1F
         set(value) {
             field = value
-            if(initialized) camera.cameraControl.setZoomRatio(value)
+            if(initialized) {
+                camera.cameraControl.setZoomRatio(value)
+                onZoomChanged(value)
+            }
         }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -120,7 +121,7 @@ abstract class CameraBase : AppCompatActivity() {
                 camera.cameraControl.setZoomRatio(mZoomRatio)
                 initialized = true
 
-                onCameraStarted(camera.cameraInfo)
+                onCameraChanged(camera.cameraInfo)
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
@@ -168,10 +169,9 @@ abstract class CameraBase : AppCompatActivity() {
     abstract fun onBind(): PreviewView
 
     // called after successful camera launch
-    open fun onCameraStarted(cameraInfo: CameraInfo) {}
+    open fun onCameraChanged(cameraInfo: CameraInfo) {}
 
-    // called on camera selection change
-    open fun onCameraIndexChanged(cameraIndex: Int) {}
+    open fun onZoomChanged(zoom: Float) {}
 
     // ---
 
