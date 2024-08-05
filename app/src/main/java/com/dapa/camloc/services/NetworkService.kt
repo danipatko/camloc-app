@@ -27,14 +27,14 @@ class NetworkService : Service() {
         config.state = 1
         config.fov = fov
         config.setCamera(cameraIndex.toByte(), resolution.toByte(), zoom)
-        serviceHandler.write(SET_CONFIG, config.toBytes())
+        // serviceHandler.write(SET_CONFIG, config.toBytes())
     }
 
     fun setX(x: Float) {} // TODO:
 
     fun trackingClosed() {
         config.state = 0
-        serviceHandler.write(SET_CONFIG, config.toBytes())
+        // serviceHandler.write(SET_CONFIG, config.toBytes())
     }
 
     // UI updates on main
@@ -102,7 +102,6 @@ class NetworkService : Service() {
 
                 val comm = buf.get()
                 Log.d(TAG, "got: $comm")
-                Log.d(TAG, "$buf")
 
                 when(comm) {
                     SET_CONFIG -> {
@@ -110,7 +109,7 @@ class NetworkService : Service() {
                         mainHandler?.onConfigSet(config)
                         write(SET_CONFIG, config.toBytes())
                     }
-                    ASK_CONFIG -> write(ASK_CONFIG, config.toBytes())
+                    ASK_CONFIG -> write(SET_CONFIG, config.toBytes())
                     SET_STATE -> {
                         config.state = buf.get()
                         mainHandler?.onStateSet(config.state)
@@ -119,6 +118,7 @@ class NetworkService : Service() {
                     SET_CAMERA -> {
                         config.setCamera(buf)
                         trackerHandler?.onCameraSet(config.cameraIndex.toInt(), config.resolution.toInt(), config.focus)
+                        // write(SET_CONFIG, config.toBytes())
                     }
                     SET_FLASH -> trackerHandler?.onFlash()
 

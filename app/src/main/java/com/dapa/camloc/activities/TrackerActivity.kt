@@ -27,7 +27,6 @@ import kotlin.concurrent.thread
 class TrackerActivity : CameraBase() {
     private lateinit var binding: ActivityTrackerBinding
     private lateinit var mScaleDetector : ScaleGestureDetector
-    private val hardwareInfo = HardwareInfo(this)
 
     private var currentResolution = 2
 
@@ -60,7 +59,8 @@ class TrackerActivity : CameraBase() {
     }
 
     override fun onZoomChanged(zoom: Float) {
-        mNetworkService.cameraSet(currentFOV, mCameraIndex, currentResolution, mZoomRatio)
+        binding.cameraLayout.currentZoomRatio.text = String.format("%.1fX", zoom)
+        mNetworkService.cameraSet(currentFOV, mCameraIndex, currentResolution, zoom)
     }
 
     // ---
@@ -145,20 +145,21 @@ class TrackerActivity : CameraBase() {
 
     val serviceHandler = object : NetworkService.TrackerEventHandler {
         override fun onCameraSet(cameraIndex: Int, resolution: Int, focus: Float) {
+            runOnUiThread {
+                if(this@TrackerActivity.mCameraIndex != cameraIndex)
+                    this@TrackerActivity.mCameraIndex = cameraIndex
 
-            if(this@TrackerActivity.mCameraIndex != cameraIndex)
-                this@TrackerActivity.mCameraIndex = cameraIndex
+                if(this@TrackerActivity.currentResolution != resolution)
+                    this@TrackerActivity.currentResolution = resolution
 
-            if(this@TrackerActivity.currentResolution != resolution)
-                this@TrackerActivity.currentResolution = resolution
-
-            if(this@TrackerActivity.mZoomRatio != focus)
-                this@TrackerActivity.mZoomRatio = focus
+                if(this@TrackerActivity.mZoomRatio != focus)
+                    this@TrackerActivity.mZoomRatio = focus
+            }
         }
 
         override fun onStateSet(state: Byte) {
             if(state == 0.toByte()) {
-                finish()
+                runOnUiThread { finish() }
             }
         }
 

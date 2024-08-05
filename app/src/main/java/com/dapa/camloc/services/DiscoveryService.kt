@@ -66,6 +66,8 @@ class DiscoveryService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "${intent!!.action}")
+
         val wifi = this.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
         multicastLock = wifi.createMulticastLock(TAG)
